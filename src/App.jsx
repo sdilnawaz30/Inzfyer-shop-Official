@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import MobileNav from './components/MobileNav';
@@ -25,18 +26,24 @@ function App() {
   const [activePage, setActivePage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Persisted state
-  const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('inzfyer-products');
-    if (saved) {
+  const [products, setProducts] = useState([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
       try {
-        return JSON.parse(saved);
+        const response = await axios.get('/api/products');
+        if (response.data.success) {
+          setProducts(response.data.data);
+        }
       } catch (err) {
-        console.error('Failed to parse products', err);
+        console.error("Failed to fetch products:", err);
+      } finally {
+        setIsLoadingProducts(false);
       }
-    }
-    return initialProducts;
-  });
+    };
+    fetchProducts();
+  }, []);
 
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem('inzfyer-cart');
@@ -62,33 +69,8 @@ function App() {
     return [];
   });
 
-  const [salesHistory, setSalesHistory] = useState(() => {
-    const saved = localStorage.getItem('inzfyer-sales');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (err) {
-        console.error('Failed to parse sales history', err);
-      }
-    }
-    return [];
-  });
-
-  const [adminPassword, setAdminPassword] = useState(() => {
-    return localStorage.getItem('inzfyer-admin-password') || 'admin123';
-  });
-
-  const [myOrders, setMyOrders] = useState(() => {
-    const saved = localStorage.getItem('inzfyer-my-orders');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (err) {
-        console.error('Failed to parse my orders', err);
-      }
-    }
-    return [];
-  });
+  const [salesHistory, setSalesHistory] = useState([]);
+  const [myOrders, setMyOrders] = useState([]);
 
   const [recentOrder, setRecentOrder] = useState(null);
 
@@ -109,28 +91,8 @@ function App() {
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem('inzfyer-products', JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem('inzfyer-cart', JSON.stringify(cart));
-  }, [cart]);
-
-  useEffect(() => {
     localStorage.setItem('inzfyer-wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
-
-  useEffect(() => {
-    localStorage.setItem('inzfyer-sales', JSON.stringify(salesHistory));
-  }, [salesHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('inzfyer-admin-password', adminPassword);
-  }, [adminPassword]);
-
-  useEffect(() => {
-    localStorage.setItem('inzfyer-my-orders', JSON.stringify(myOrders));
-  }, [myOrders]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -196,38 +158,49 @@ function App() {
 
   // Checkout completion
   const handleCompleteCheckout = (orderData) => {
-    setSalesHistory(prev => [...prev, orderData]);
     setMyOrders(prev => [...prev, orderData]);
     setRecentOrder(orderData);
     
-    setProducts(prev => prev.map(p => {
-      const cartItem = orderData.items.find(ci => ci.id === p.id);
-      if (cartItem) {
-        return { ...p, stock: Math.max(0, p.stock - cartItem.qty) };
+    // Refresh products to get updated stock
+    axios.get('/api/products').then(res => {
+      if(res.data.success) {
+        setProducts(res.data.data);
       }
-      return p;
-    }));
+    });
 
     setCart([]);
     setAppliedPromo(null);
   };
 
   // Admin Inventory CRUD
-  const handleSaveProduct = (productData) => {
-    if (productToEdit) {
-      setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
-      showToast(`Updated "${productData.name}"`, 'success');
-    } else {
-      setProducts(prev => [productData, ...prev]);
-      showToast(`Added "${productData.name}" to boutique catalog!`, 'success');
+  const handleSaveProduct = async (productData) => {
+    try {
+      await axios.post('/api/admin/action', { action: 'saveProduct', payload: productData });
+      
+      if (productToEdit) {
+        setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
+        showToast(`Updated "${productData.name}"`, 'success');
+      } else {
+        setProducts(prev => [productData, ...prev]);
+        showToast(`Added "${productData.name}" to boutique catalog!`, 'success');
+      }
+    } catch (err) {
+      showToast('Failed to save product. Admin session may have expired.', 'error');
     }
+    
     setIsProductModalOpen(false);
     setProductToEdit(null);
   };
 
-  const handleDeleteConfirm = (id) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
-    showToast('Product deleted from inventory', 'info');
+  const handleDeleteConfirm = async (id) => {
+    try {
+      await axios.post('/api/admin/action', { action: 'deleteProduct', payload: { id } });
+      setProducts(prev => prev.filter(p => p.id !== id));
+      showToast('Product deleted from inventory', 'info');
+    } catch (err) {
+      showToast('Failed to delete product.', 'error');
+    }
+    
     setIsDeleteModalOpen(false);
     setProductToDelete(null);
   };
@@ -247,7 +220,8 @@ function App() {
         setSearchQuery={setSearchQuery}
         isAdmin={isAdmin}
         setIsAdminModalOpen={setIsAdminModalOpen}
-        onLogoutAdmin={() => {
+        onLogoutAdmin={async () => {
+          await axios.post('/api/admin/logout');
           setIsAdmin(false);
           setActivePage('home');
           showToast('Logged out of Admin Portal', 'info');
@@ -364,26 +338,8 @@ function App() {
               isAdmin ? (
                 <AdminPanel 
                   products={products}
-                  salesHistory={salesHistory}
-                  adminPassword={adminPassword}
-                  setAdminPassword={setAdminPassword}
-                  onSaveProduct={(prod) => {
-                    setProductToEdit(prod || null);
-                    setIsProductModalOpen(true);
-                  }}
-                  onDeleteProduct={(prod) => {
-                    setProductToDelete(prod);
-                    setIsDeleteModalOpen(true);
-                  }}
-                  onUpdateStock={(id, newStock) => {
-                    setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
-                    showToast('Stock level updated!', 'success');
-                  }}
-                  onUpdateOrderStatus={(orderId, newStatus) => {
-                    setSalesHistory(prev => prev.map(o => o.orderId === orderId ? { ...o, orderStatus: newStatus } : o));
-                    showToast(`Order ${orderId} marked as ${newStatus}`, 'success');
-                  }}
-                  onLogout={() => {
+                  onLogout={async () => {
+                    await axios.post('/api/admin/logout');
                     setIsAdmin(false);
                     setActivePage('home');
                     showToast('Logged out of Admin Portal', 'info');
@@ -429,7 +385,6 @@ function App() {
       <AdminLoginModal 
         isOpen={isAdminModalOpen}
         onClose={() => setIsAdminModalOpen(false)}
-        adminPassword={adminPassword}
         onLoginSuccess={() => {
           setIsAdmin(true);
           setActivePage('admin');

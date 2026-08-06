@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { getDb } from '../src/db/index.js';
+import * as schema from '../src/db/schema.js';
+import { eq } from 'drizzle-orm';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -33,20 +36,43 @@ export default async function handler(req, res) {
       }
     );
 
-    // The response is an array of payments for this order
     const payments = response.data;
-    
-    // Find if there's any SUCCESS payment
     const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS');
 
     if (successfulPayment) {
+      // Update DB if not already updated by webhook
+      const db = getDb();
+      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.orderId, orderId));
+      
+      if (order && order.paymentStatus !== 'Paid') {
+        await db.update(schema.orders)
+          .set({
+            paymentStatus: 'Paid',
+            transactionId: successfulPayment.cf_payment_id.toString(),
+          })
+          .where(eq(schema.orders.orderId, orderId));
+
+        // Decrement stock
+        for (const item of order.items) {
+          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.id));
+          if (product) {
+            await db.update(schema.products)
+              .set({ stock: Math.max(0, product.stock - item.qty) })
+              .where(eq(schema.products.id, item.id));
+          }
+        }
+      }
+
+      // Fetch the updated order
+      const [updatedOrder] = await db.select().from(schema.orders).where(eq(schema.orders.orderId, orderId));
+
       res.status(200).json({
         success: true,
         payment: successfulPayment,
+        orderData: updatedOrder, // Return the verified order data to frontend
         message: 'Payment verified successfully'
       });
     } else {
-      // Find latest pending or failed status
       const latestPayment = payments[payments.length - 1];
       res.status(200).json({
         success: false,
@@ -64,3 +90,4 @@ export default async function handler(req, res) {
     });
   }
 }
+

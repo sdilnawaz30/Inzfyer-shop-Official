@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   LayoutDashboard, 
   Package, 
@@ -28,20 +29,37 @@ import logoImg from '../assets/logo.png';
 import PosView from './PosView';
 
 const AdminPanel = ({ 
-  products, 
-  salesHistory = [], 
-  adminPassword,
-  setAdminPassword,
-  onSaveProduct, 
-  onDeleteProduct, 
-  onUpdateStock,
-  onUpdateOrderStatus,
   onLogout,
   showToast
 }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [stockInAmount, setStockInAmount] = useState(10);
+  const [products, setProducts] = useState([]);
+  const [salesHistory, setSalesHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        const response = await axios.get('/api/admin/data');
+        if (response.data.success) {
+          setProducts(response.data.products);
+          setSalesHistory(response.data.orders);
+        }
+      } catch (err) {
+        if (err.response?.status === 401) {
+          showToast('Session expired. Please log in again.', 'error');
+          onLogout();
+        } else {
+          showToast('Failed to load admin data', 'error');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAdminData();
+  }, [onLogout, showToast]);
 
   // Calculated Metrics for Glass Cards
   const totalProducts = products.length;
@@ -76,6 +94,10 @@ const AdminPanel = ({
     { id: 'Inventory', label: 'Inventory (Stock)', icon: Boxes, badge: lowStockItems.length > 0 ? `${lowStockItems.length} Low` : null },
     { id: 'Settings', label: 'Settings', icon: Settings },
   ];
+
+  if (isLoading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>Loading Admin Portal securely...</div>;
+  }
 
   return (
     <div className="animate-fade-in" style={{
@@ -424,7 +446,12 @@ const AdminPanel = ({
                       <td style={{ padding: '0.85rem' }}>
                         <select 
                           value={order.orderStatus || 'Pending'}
-                          onChange={(e) => onUpdateOrderStatus && onUpdateOrderStatus(order.orderId, e.target.value)}
+                          onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            setSalesHistory(prev => prev.map(o => o.orderId === order.orderId ? { ...o, orderStatus: newStatus } : o));
+                            await axios.post('/api/admin/action', { action: 'updateOrderStatus', payload: { orderId: order.orderId, status: newStatus } });
+                            showToast(`Order ${order.orderId} marked as ${newStatus}`, 'success');
+                          }}
                           style={{
                             padding: '0.4rem',
                             borderRadius: '6px',
@@ -526,7 +553,12 @@ const AdminPanel = ({
                         <span style={{ fontSize: '0.78rem', color: '#d97706', fontWeight: 700 }}>Only {item.stock} units left!</span>
                       </div>
                       <button 
-                        onClick={() => onUpdateStock(item.id, item.stock + 10)}
+                        onClick={async () => {
+                           const newStock = item.stock + 10;
+                           setProducts(prev => prev.map(p => p.id === item.id ? { ...p, stock: newStock } : p));
+                           await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: item.id, stock: newStock } });
+                           showToast('Stock level updated!', 'success');
+                        }}
                         className="btn btn-primary"
                         style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
                       >
@@ -567,7 +599,11 @@ const AdminPanel = ({
                       <td style={{ padding: '0.85rem', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
                           <button 
-                            onClick={() => onUpdateStock(p.id, p.stock + 1)}
+                            onClick={async () => {
+                              const newStock = p.stock + 1;
+                              setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                            }}
                             className="btn btn-ghost"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', borderColor: '#047857', color: '#047857' }}
                             title="Add 1 Unit"
@@ -575,7 +611,11 @@ const AdminPanel = ({
                             <ArrowUpRight size={14} /> +1
                           </button>
                           <button 
-                            onClick={() => onUpdateStock(p.id, p.stock + 10)}
+                            onClick={async () => {
+                              const newStock = p.stock + 10;
+                              setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                            }}
                             className="btn btn-primary"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', background: '#047857', borderColor: '#047857' }}
                             title="Add 10 Units Batch"
@@ -589,7 +629,11 @@ const AdminPanel = ({
                       <td style={{ padding: '0.85rem', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
                           <button 
-                            onClick={() => onUpdateStock(p.id, Math.max(0, p.stock - 1))}
+                            onClick={async () => {
+                              const newStock = Math.max(0, p.stock - 1);
+                              setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                            }}
                             className="btn btn-ghost"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', borderColor: '#dc2626', color: '#dc2626' }}
                             title="Deduct 1 Unit"
@@ -597,7 +641,11 @@ const AdminPanel = ({
                             <ArrowDownRight size={14} /> -1
                           </button>
                           <button 
-                            onClick={() => onUpdateStock(p.id, Math.max(0, p.stock - 5))}
+                            onClick={async () => {
+                              const newStock = Math.max(0, p.stock - 5);
+                              setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                            }}
                             className="btn btn-ghost"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#dc2626' }}
                             title="Deduct 5 Units"
@@ -660,15 +708,8 @@ const AdminPanel = ({
               </div>
 
               <div style={{ marginBottom: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #F8D7D0' }}>
-                <label className="form-label" style={{ color: '#8C2E3C' }}>Admin Panel Password</label>
-                <input 
-                  type="text" 
-                  value={adminPassword} 
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="Enter new admin password"
-                />
-                <span style={{ fontSize: '0.75rem', color: '#5C4347', display: 'block', marginTop: '0.4rem' }}>
-                  This password is required to access the admin portal.
+                <span style={{ fontSize: '0.85rem', color: '#5C4347', display: 'block' }}>
+                  Notice: Admin Password management has been moved to secure environment variables (`ADMIN_PASSWORD`).
                 </span>
               </div>
 

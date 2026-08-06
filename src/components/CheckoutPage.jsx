@@ -18,6 +18,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
   });
 
   const [cashfree, setCashfree] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const initializeCashfree = async () => {
@@ -48,12 +49,16 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
 
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
+    if (isProcessing) return;
+    setIsProcessing(true);
     setStep('processing');
     
     try {
       const orderId = `INZ-${Math.floor(100000 + Math.random() * 900000)}`;
+      
+      // We no longer send the total amount; backend recalculates it securely.
       const createOrderRes = await axios.post('/api/create-order', {
-        orderAmount: total,
+        items: cart.map(item => ({ id: item.id, qty: item.qty })),
         orderId,
         customerDetails: {
           name: formData.name,
@@ -86,41 +91,28 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
               const verifyRes = await axios.post('/api/verify-payment', { orderId });
               
               if (verifyRes.data.success) {
-                const orderData = {
-                  orderId,
-                  transactionId: verifyRes.data.payment.cf_payment_id || `UPI${Math.floor(100000000000 + Math.random() * 900000000000)}`,
-                  timestamp: new Date().toLocaleString(),
-                  customer: formData,
-                  items: [...cart],
-                  subtotal,
-                  discount,
-                  shippingFee,
-                  tax,
-                  total,
-                  paymentStatus: 'Paid',
-                  orderStatus: 'Pending',
-                  paymentMethod: 'UPI'
-                };
-
-                onCompleteCheckout(orderData);
+                onCompleteCheckout(verifyRes.data.orderData);
                 setActivePage('order-success');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               } else {
-                alert("Payment verification failed. Please contact support if amount was deducted.");
+                alert("Payment verification failed. Please contact support.");
                 setStep('payment');
+                setIsProcessing(false);
               }
             } catch (err) {
               console.error("Verification error", err);
-              alert("Payment verification error.");
+              alert("Payment verification encountered an issue.");
               setStep('payment');
+              setIsProcessing(false);
             }
           }
         });
       }
     } catch (error) {
       console.error("Error creating order:", error);
-      alert("Failed to initiate payment. Please try again.");
+      alert("Failed to initiate secure checkout. Please try again later.");
       setStep('payment');
+      setIsProcessing(false);
     }
   };
 
@@ -217,8 +209,8 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
               </div>
 
               <form onSubmit={handlePaymentSubmit}>
-                <button type="submit" className="btn btn-primary" disabled={!cashfree} style={{ width: '100%', padding: '1.1rem', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
-                  <ShieldCheck size={20} /> Pay Securely ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                <button type="submit" className="btn btn-primary" disabled={!cashfree || isProcessing} style={{ width: '100%', padding: '1.1rem', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+                  <ShieldCheck size={20} /> {isProcessing ? 'Processing Securely...' : `Pay Securely ₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                 </button>
                 <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '1rem' }}>
                   100% Secure & Encrypted Payment by Cashfree

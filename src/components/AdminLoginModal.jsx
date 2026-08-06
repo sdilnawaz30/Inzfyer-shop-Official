@@ -2,30 +2,33 @@ import React, { useState } from 'react';
 import { Lock, Mail, Sparkles, X, ShieldCheck } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
-const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess, adminPassword }) => {
+import axios from 'axios';
+
+const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [email, setEmail] = useState('admin@inzfyer.com');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (email && (password === adminPassword || password === 'admin')) {
-      onLoginSuccess();
-      setPassword('');
-      setError('');
-      onClose();
-    } else {
-      setError(`Invalid admin credentials.`);
-    }
-  };
-
-  const handleQuickDemoLogin = () => {
-    onLoginSuccess();
-    setPassword('');
+    setIsLoading(true);
     setError('');
-    onClose();
+    
+    try {
+      const response = await axios.post('/api/admin/login', { password });
+      if (response.data.success) {
+        onLoginSuccess();
+        setPassword('');
+        onClose();
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid admin credentials.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -105,22 +108,15 @@ const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess, adminPassword }) => 
             {error && <span style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '0.4rem', display: 'block' }}>{error}</span>}
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', marginBottom: '1rem', fontSize: '0.95rem' }}>
-            Authorize Admin Access
+          <button type="submit" disabled={isLoading} className="btn btn-primary" style={{ width: '100%', padding: '0.85rem', marginBottom: '1rem', fontSize: '0.95rem' }}>
+            {isLoading ? 'Authorizing...' : 'Authorize Admin Access'}
           </button>
         </form>
 
         <div style={{ borderTop: '1px solid #F8D7D0', paddingTop: '1rem', textAlign: 'center' }}>
           <span style={{ fontSize: '0.78rem', color: '#94757A', display: 'block', marginBottom: '0.6rem' }}>
-            Testing / Demo Mode Active
+            Secure Serverless Admin Access
           </span>
-          <button 
-            onClick={handleQuickDemoLogin}
-            className="btn btn-ghost"
-            style={{ width: '100%', fontSize: '0.85rem', padding: '0.6rem', color: '#8C2E3C', borderStyle: 'dashed' }}
-          >
-            <Sparkles size={16} /> Quick One-Click Demo Admin Login
-          </button>
         </div>
       </div>
     </div>
