@@ -1,16 +1,52 @@
-# React + Vite
+# Inzfyer Shop Official
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the Inzfyer Shop web application. This repository contains the source code for our digital storefront and administration panel. 
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Inzfyer Shop is an e-commerce platform built to manage product catalogs, handle customer orders, and process payments. It includes both a customer-facing storefront and a secured administration dashboard for inventory management.
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Product Catalog**: Browse and view detailed information for available items.
+- **Shopping Cart & Checkout**: Add products to the cart and complete purchases.
+- **Admin Dashboard**: Manage inventory, view sales data, and handle store operations.
+- **Responsive Layout**: Accessible on desktop, tablet, and mobile devices.
 
-## Expanding the ESLint configuration
+## Technology Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Frontend**: React, Vite
+- **Styling**: Custom CSS
+- **Routing**: React Router
+
+## Local Setup
+
+To run this project locally, follow these steps:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Rajar219/Inzfyer-shop-Official.git
+   ```
+
+2. Navigate to the project directory:
+   ```bash
+   cd Inzfyer-shop-official
+   ```
+
+3. Install the required dependencies:
+   ```bash
+   npm install
+   ```
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Design Credits
+
+Designed by **Wisdo designs**.
+
+## License
+
+All rights reserved.
