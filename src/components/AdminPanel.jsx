@@ -35,6 +35,7 @@ const AdminPanel = ({
   onSaveProduct, 
   onDeleteProduct, 
   onUpdateStock,
+  onUpdateOrderStatus,
   onLogout,
   showToast
 }) => {
@@ -390,22 +391,58 @@ const AdminPanel = ({
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
                     <th style={{ padding: '0.85rem' }}>Order Ref</th>
                     <th style={{ padding: '0.85rem' }}>Date</th>
-                    <th style={{ padding: '0.85rem' }}>Customer</th>
-                    <th style={{ padding: '0.85rem' }}>Items</th>
+                    <th style={{ padding: '0.85rem' }}>Customer & Shipping</th>
+                    <th style={{ padding: '0.85rem' }}>Payment / Txn ID</th>
                     <th style={{ padding: '0.85rem' }}>Total</th>
-                    <th style={{ padding: '0.85rem' }}>Fulfillment</th>
+                    <th style={{ padding: '0.85rem' }}>Fulfillment Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {salesHistory.map((order, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F8D7D0' }}>
+                  {salesHistory.slice().reverse().map((order, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #F8D7D0', verticalAlign: 'top' }}>
                       <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{order.orderId || `ORD-${idx+1001}`}</td>
-                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.date || 'Today'}</td>
-                      <td style={{ padding: '0.85rem', fontWeight: 600 }}>{order.customerName || 'Boutique Guest'}</td>
-                      <td style={{ padding: '0.85rem' }}>{order.items?.length || 1} Products</td>
+                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.timestamp || 'Today'}</td>
+                      <td style={{ padding: '0.85rem' }}>
+                        <div style={{ fontWeight: 600 }}>{order.customer?.name || order.customerName || 'Boutique Guest'}</div>
+                        {order.customer && (
+                          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', lineHeight: '1.4' }}>
+                            {order.customer.address1}<br/>
+                            {order.customer.city} - {order.customer.pincode}<br/>
+                            {order.customer.mobile}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.85rem' }}>
+                        <div style={{ fontWeight: 600, color: '#047857' }}>{order.paymentStatus || 'Paid'} via {order.paymentMethod || 'UPI'}</div>
+                        {order.transactionId && (
+                          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', fontFamily: 'monospace' }}>
+                            Txn: {order.transactionId}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B' }}>₹{order.total?.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <span className="badge badge-success"><CheckCircle size={12} /> Dispatched</span>
+                        <select 
+                          value={order.orderStatus || 'Pending'}
+                          onChange={(e) => onUpdateOrderStatus && onUpdateOrderStatus(order.orderId, e.target.value)}
+                          style={{
+                            padding: '0.4rem',
+                            borderRadius: '6px',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '0.85rem',
+                            backgroundColor: '#fdf2f8',
+                            color: '#A63A4B',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Confirmed">Confirmed</option>
+                          <option value="Packed">Packed</option>
+                          <option value="Shipped">Shipped</option>
+                          <option value="Delivered">Delivered</option>
+                          <option value="Cancelled">Cancelled</option>
+                        </select>
                       </td>
                     </tr>
                   ))}

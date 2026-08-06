@@ -6,7 +6,9 @@ import HomePage from './components/HomePage';
 import ShopPage from './components/ShopPage';
 import ProductDetailPage from './components/ProductDetailPage';
 import CartView from './components/CartView';
-import CheckoutModal from './components/CheckoutModal';
+import CheckoutPage from './components/CheckoutPage';
+import OrderSuccessPage from './components/OrderSuccessPage';
+import MyOrdersPage from './components/MyOrdersPage';
 import WishlistView from './components/WishlistView';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
@@ -76,13 +78,26 @@ function App() {
     return localStorage.getItem('inzfyer-admin-password') || 'admin123';
   });
 
+  const [myOrders, setMyOrders] = useState(() => {
+    const saved = localStorage.getItem('inzfyer-my-orders');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (err) {
+        console.error('Failed to parse my orders', err);
+      }
+    }
+    return [];
+  });
+
+  const [recentOrder, setRecentOrder] = useState(null);
+
   const [appliedPromo, setAppliedPromo] = useState(null);
 
   // Admin & Modals
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [selectedProductForDetail, setSelectedProductForDetail] = useState(null);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Admin inventory CRUD modals
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -113,6 +128,10 @@ function App() {
     localStorage.setItem('inzfyer-admin-password', adminPassword);
   }, [adminPassword]);
 
+  useEffect(() => {
+    localStorage.setItem('inzfyer-my-orders', JSON.stringify(myOrders));
+  }, [myOrders]);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
   };
@@ -137,7 +156,7 @@ function App() {
   const handleBuyNow = (productToBuy) => {
     handleAddToCart(productToBuy);
     setSelectedProductForDetail(null);
-    setIsCheckoutOpen(true);
+    setActivePage('checkout');
   };
 
   const handleUpdateCartQty = (id, newQty) => {
@@ -176,8 +195,10 @@ function App() {
   };
 
   // Checkout completion
-  const handleCompleteOrder = (orderData) => {
+  const handleCompleteCheckout = (orderData) => {
     setSalesHistory(prev => [...prev, orderData]);
+    setMyOrders(prev => [...prev, orderData]);
+    setRecentOrder(orderData);
     
     setProducts(prev => prev.map(p => {
       const cartItem = orderData.items.find(ci => ci.id === p.id);
@@ -300,10 +321,33 @@ function App() {
                 onRemoveFromCart={handleRemoveFromCart}
                 onClearCart={handleClearCart}
                 setActivePage={setActivePage}
-                onOpenCheckout={() => setIsCheckoutOpen(true)}
                 appliedPromo={appliedPromo}
                 setAppliedPromo={setAppliedPromo}
                 showToast={showToast}
+              />
+            )}
+
+            {activePage === 'checkout' && (
+              <CheckoutPage 
+                cart={cart}
+                onCompleteCheckout={handleCompleteCheckout}
+                setActivePage={setActivePage}
+                appliedPromo={appliedPromo}
+              />
+            )}
+
+            {activePage === 'order-success' && (
+              <OrderSuccessPage 
+                orderData={recentOrder}
+                setActivePage={setActivePage}
+              />
+            )}
+
+            {activePage === 'my-orders' && (
+              <MyOrdersPage 
+                myOrders={myOrders}
+                salesHistory={salesHistory}
+                setActivePage={setActivePage}
               />
             )}
 
@@ -334,6 +378,10 @@ function App() {
                   onUpdateStock={(id, newStock) => {
                     setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
                     showToast('Stock level updated!', 'success');
+                  }}
+                  onUpdateOrderStatus={(orderId, newStatus) => {
+                    setSalesHistory(prev => prev.map(o => o.orderId === orderId ? { ...o, orderStatus: newStatus } : o));
+                    showToast(`Order ${orderId} marked as ${newStatus}`, 'success');
                   }}
                   onLogout={() => {
                     setIsAdmin(false);
@@ -377,13 +425,6 @@ function App() {
       />
 
       {/* Modals */}
-      <CheckoutModal 
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        cart={cart}
-        onCompleteOrder={handleCompleteOrder}
-        appliedPromo={appliedPromo}
-      />
 
       <AdminLoginModal 
         isOpen={isAdminModalOpen}

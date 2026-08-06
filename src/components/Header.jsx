@@ -19,6 +19,7 @@ const Header = ({
   const navItems = [
     { id: 'home', label: 'Home' },
     { id: 'shop', label: 'Shop' },
+    { id: 'my-orders', label: 'My Orders' },
     { id: 'wishlist', label: 'Wishlist', badge: wishlistCount },
     { id: 'cart', label: 'Cart', badge: cartCount },
     { id: 'about', label: 'About' },

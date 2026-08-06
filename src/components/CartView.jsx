@@ -228,20 +228,11 @@ const CartView = ({
             </div>
 
             <button 
-              onClick={() => {
-                const grandTotal = total + (freeShipping ? 0 : 149);
-                const itemLines = cart.map(item => 
-                  `• ${item.name} x${item.qty} — ₹${(item.price * item.qty).toLocaleString('en-IN')}`
-                ).join('\n');
-                const msg = `Hi! I'd like to order from INZFYER 🛍️\n\n` +
-                  `${itemLines}\n\n` +
-                  `Total: ₹${grandTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-                window.open(`https://wa.me/918295953595?text=${encodeURIComponent(msg)}`, '_blank');
-              }}
+              onClick={() => setActivePage('checkout')}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '0.9rem', fontSize: '1rem', background: '#25D366', border: 'none' }}
+              style={{ width: '100%', padding: '0.9rem', fontSize: '1rem', border: 'none' }}
             >
-              Order via WhatsApp 💬
+              Proceed to Checkout
             </button>
           </div>
         </div>
