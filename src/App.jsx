@@ -72,6 +72,10 @@ function App() {
     return [];
   });
 
+  const [adminPassword, setAdminPassword] = useState(() => {
+    return localStorage.getItem('inzfyer-admin-password') || 'admin123';
+  });
+
   const [appliedPromo, setAppliedPromo] = useState(null);
 
   // Admin & Modals
@@ -104,6 +108,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('inzfyer-sales', JSON.stringify(salesHistory));
   }, [salesHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('inzfyer-admin-password', adminPassword);
+  }, [adminPassword]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -313,6 +321,8 @@ function App() {
                 <AdminPanel 
                   products={products}
                   salesHistory={salesHistory}
+                  adminPassword={adminPassword}
+                  setAdminPassword={setAdminPassword}
                   onSaveProduct={(prod) => {
                     setProductToEdit(prod || null);
                     setIsProductModalOpen(true);
@@ -330,6 +340,7 @@ function App() {
                     setActivePage('home');
                     showToast('Logged out of Admin Portal', 'info');
                   }}
+                  showToast={showToast}
                 />
               ) : (
                 <div style={{ textAlign: 'center', padding: '4rem 1rem', maxWidth: '500px', margin: '0 auto' }} className="glass glass-card">
@@ -377,6 +388,7 @@ function App() {
       <AdminLoginModal 
         isOpen={isAdminModalOpen}
         onClose={() => setIsAdminModalOpen(false)}
+        adminPassword={adminPassword}
         onLoginSuccess={() => {
           setIsAdmin(true);
           setActivePage('admin');

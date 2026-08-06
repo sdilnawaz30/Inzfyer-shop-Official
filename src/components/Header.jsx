@@ -30,7 +30,7 @@ const Header = ({
       {/* Top Promo Banner */}
       <div className="header-banner">
         <Sparkles size={14} />
-        <span>Free Luxury Gift Packaging & Ribbon on Orders Over ₹1,999!</span>
+        <span>Starting offers from 10-20% on every orders </span>
       </div>
 
       <div className="header-main">

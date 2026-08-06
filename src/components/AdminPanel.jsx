@@ -30,10 +30,13 @@ import PosView from './PosView';
 const AdminPanel = ({ 
   products, 
   salesHistory = [], 
+  adminPassword,
+  setAdminPassword,
   onSaveProduct, 
   onDeleteProduct, 
   onUpdateStock,
-  onLogout 
+  onLogout,
+  showToast
 }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [searchTerm, setSearchTerm] = useState('');
@@ -578,7 +581,10 @@ const AdminPanel = ({
         {activeTab === 'Settings' && (
           <div className="glass glass-card" style={{ background: '#ffffff', maxWidth: '640px' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.5rem' }}>Boutique Operational Settings</h3>
-            <form onSubmit={(e) => { e.preventDefault(); alert('Store settings updated successfully!'); }}>
+            <form onSubmit={(e) => { 
+              e.preventDefault(); 
+              showToast('Store settings updated successfully!', 'success'); 
+            }}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label">Store Brand Name</label>
                 <input 
@@ -614,6 +620,19 @@ const AdminPanel = ({
                     onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: Number(e.target.value) })}
                   />
                 </div>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #F8D7D0' }}>
+                <label className="form-label" style={{ color: '#8C2E3C' }}>Admin Panel Password</label>
+                <input 
+                  type="text" 
+                  value={adminPassword} 
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter new admin password"
+                />
+                <span style={{ fontSize: '0.75rem', color: '#5C4347', display: 'block', marginTop: '0.4rem' }}>
+                  This password is required to access the admin portal.
+                </span>
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.85rem' }}>

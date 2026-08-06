@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Mail, Sparkles, X, ShieldCheck } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
-const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
+const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess, adminPassword }) => {
   const [email, setEmail] = useState('admin@inzfyer.com');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,13 +11,13 @@ const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (email && (password === 'admin123' || password === 'admin')) {
+    if (email && (password === adminPassword || password === 'admin')) {
       onLoginSuccess();
       setPassword('');
       setError('');
       onClose();
     } else {
-      setError('Invalid admin credentials. Email: admin@inzfyer.com, Password: admin123');
+      setError(`Invalid admin credentials.`);
     }
   };
 
@@ -95,7 +95,7 @@ const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
               <Lock size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94757A' }} />
               <input 
                 type="password" 
-                placeholder="Enter password (admin123)..."
+                placeholder="Enter password..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
