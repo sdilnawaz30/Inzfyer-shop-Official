@@ -74,15 +74,15 @@ const Footer = ({ setActivePage, showToast }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.9rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <MapPin size={16} color="#be185d" />
-                <span style={{ color: '#4b5563' }}>Washermenpet, Chennai</span>
+                <span style={{ color: '#4b5563' }}>Broadway Chennai.</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <MessageCircle size={16} color="#25D366" />
-                <a href="https://wa.me/918295953595" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>+91 82959 53595</a>
+                <a href="https://wa.me/919445544739" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>+91-9445544739</a>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <Mail size={16} color="#be185d" />
-                <span style={{ color: '#4b5563' }}>inzfyer21@gmail.com</span>
+                <span style={{ color: '#4b5563' }}>admin@inzfyer.in</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <Camera size={16} color="#E1306C" />

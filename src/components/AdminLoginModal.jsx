@@ -5,7 +5,7 @@ import logoImg from '../assets/logo.png';
 import axios from 'axios';
 
 const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [email, setEmail] = useState('admin@inzfyer.com');
+  const [email, setEmail] = useState('admin@inzfyer.in');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +80,7 @@ const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
               <Mail size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94757A' }} />
               <input 
                 type="email" 
-                placeholder="admin@inzfyer.com"
+                placeholder="admin@inzfyer.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

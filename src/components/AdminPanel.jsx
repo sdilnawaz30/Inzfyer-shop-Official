@@ -78,7 +78,7 @@ const AdminPanel = ({
   // Store Settings State
   const [storeSettings, setStoreSettings] = useState({
     storeName: 'INZFYER Luxury Gifts',
-    contactEmail: 'admin@inzfyer.com',
+    contactEmail: 'admin@inzfyer.in',
     currency: 'INR (₹)',
     freeShippingMin: 1999,
     taxRate: 5,
@@ -211,7 +211,7 @@ const AdminPanel = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.85rem', color: '#5C4347', fontWeight: 600 }}>Logged in as: admin@inzfyer.com</span>
+            <span style={{ fontSize: '0.85rem', color: '#5C4347', fontWeight: 600 }}>Logged in as: admin@inzfyer.in</span>
           </div>
         </div>
 
