@@ -51,14 +51,16 @@
   padding: 0;
 }
 
-html, body {
+html {
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
   background: linear-gradient(160deg, #FFF8FB 0%, #FFF0F5 20%, #F8F0FF 45%, #FFF5F8 70%, #F0EEFF 100%);
-  background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
   position: relative;
 }
 
