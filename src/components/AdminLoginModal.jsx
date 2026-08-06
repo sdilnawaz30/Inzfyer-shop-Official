@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Sparkles, X, ShieldCheck } from 'lucide-react';
-import logoImg from '../assets/logo.jpeg';
+import logoImg from '../assets/logo.png';
 
 const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [email, setEmail] = useState('admin@inzfyer.com');

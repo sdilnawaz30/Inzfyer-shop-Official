@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Heart, ShoppingBag, ShieldCheck, Menu, X, Sparkles } from 'lucide-react';
-import logoImg from '../assets/logo.jpeg';
+import logoImg from '../assets/logo.png';
 import './Header.css';
 
 const Header = ({ 
@@ -37,10 +37,6 @@ const Header = ({
         {/* Brand Logo */}
         <div className="header-brand" onClick={() => setActivePage('home')}>
           <img src={logoImg} alt="INZFYER Logo" className="header-brand-logo" />
-          <div>
-            <h1 className="brand-font header-brand-name">INZFYER</h1>
-            <span className="header-brand-tagline">Cute Luxury Toys & Gifts</span>
-          </div>
         </div>
 
         {/* Desktop Navigation - Pill Style */}

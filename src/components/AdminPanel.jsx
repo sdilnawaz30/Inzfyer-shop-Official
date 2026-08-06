@@ -24,7 +24,7 @@ import {
   RefreshCw,
   Printer
 } from 'lucide-react';
-import logoImg from '../assets/logo.jpeg';
+import logoImg from '../assets/logo.png';
 import PosView from './PosView';
 
 const AdminPanel = ({ 

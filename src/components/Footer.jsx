@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Heart, Camera, Mail, MapPin, MessageCircle, Sparkles, Send } from 'lucide-react';
-import logoImg from '../assets/logo.jpeg';
+import logoImg from '../assets/logo.png';
 
 const Footer = ({ setActivePage, showToast }) => {
   const [email, setEmail] = useState('');
@@ -36,17 +36,12 @@ const Footer = ({ setActivePage, showToast }) => {
                 src={logoImg} 
                 alt="INZFYER Logo" 
                 style={{
-                  height: '46px',
+                  height: '80px',
                   width: 'auto',
-                  borderRadius: '10px',
                   objectFit: 'contain',
-                  border: '1.5px solid rgba(244, 114, 182, 0.3)',
-                  background: '#ffffff',
-                  padding: '2px 6px',
-                  boxShadow: '0 4px 12px rgba(219, 39, 119, 0.12)'
+                  background: 'transparent'
                 }}
               />
-              <h2 className="brand-font" style={{ fontSize: '1.7rem', color: '#be185d' }}>INZFYER</h2>
             </div>
             <p style={{ fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '1.25rem', color: '#4b5563' }}>
               Crafting smiles & magical moments with premium plushies, handcrafted gift sets, and boutique keepsakes wrapped in love.

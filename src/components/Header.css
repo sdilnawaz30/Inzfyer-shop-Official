@@ -49,21 +49,16 @@
 }
 
 .header-brand-logo {
-  height: 48px;
+  height: 80px;
   width: auto;
-  max-height: 48px;
-  border-radius: 14px;
+  max-height: 80px;
   object-fit: contain;
-  box-shadow: 0 4px 18px rgba(255, 75, 152, 0.15);
-  border: 2px solid rgba(255, 75, 152, 0.15);
-  background: #ffffff;
-  padding: 4px 8px;
+  background: transparent;
   transition: all 0.3s ease;
 }
 
 .header-brand:hover .header-brand-logo {
-  box-shadow: 0 6px 24px rgba(255, 75, 152, 0.25);
-  border-color: rgba(255, 75, 152, 0.3);
+  transform: scale(1.05);
 }
 
 .header-brand-name {
