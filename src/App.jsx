@@ -27,8 +27,29 @@ import { initialProducts } from './data/initialProducts';
 import { Plus, ShieldCheck, Lock } from 'lucide-react';
 
 function App() {
-  const [activePage, setActivePage] = useState('home');
+  const [activePage, setActivePage] = useState(() => {
+    const path = window.location.pathname.replace(/^\/+/, '');
+    const validPages = ['home', 'shop', 'wishlist', 'cart', 'checkout', 'order-success', 'my-orders', 'about', 'contact', 'privacy', 'refund', 'shipping', 'terms', 'admin'];
+    return validPages.includes(path) ? path : 'home';
+  });
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const path = activePage === 'home' ? '/' : `/${activePage}`;
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+  }, [activePage]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.replace(/^\/+/, '');
+      const validPages = ['home', 'shop', 'wishlist', 'cart', 'checkout', 'order-success', 'my-orders', 'about', 'contact', 'privacy', 'refund', 'shipping', 'terms', 'admin'];
+      setActivePage(validPages.includes(path) ? path : 'home');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   const [products, setProducts] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
