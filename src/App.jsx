@@ -13,6 +13,10 @@ import MyOrdersPage from './components/MyOrdersPage';
 import WishlistView from './components/WishlistView';
 import AboutPage from './components/AboutPage';
 import ContactPage from './components/ContactPage';
+import PrivacyPolicyPage from './components/PrivacyPolicyPage';
+import RefundPolicyPage from './components/RefundPolicyPage';
+import ShippingPolicyPage from './components/ShippingPolicyPage';
+import TermsPolicyPage from './components/TermsPolicyPage';
 import AdminLoginModal from './components/AdminLoginModal';
 import AdminPanel from './components/AdminPanel';
 import ProductTable from './components/ProductTable';
@@ -331,6 +335,22 @@ function App() {
 
             {activePage === 'contact' && (
               <ContactPage showToast={showToast} />
+            )}
+
+            {activePage === 'privacy' && (
+              <PrivacyPolicyPage setActivePage={setActivePage} />
+            )}
+
+            {activePage === 'refund' && (
+              <RefundPolicyPage setActivePage={setActivePage} />
+            )}
+
+            {activePage === 'shipping' && (
+              <ShippingPolicyPage setActivePage={setActivePage} />
+            )}
+
+            {activePage === 'terms' && (
+              <TermsPolicyPage setActivePage={setActivePage} />
             )}
 
             {/* Admin Portal Protected Routing */}

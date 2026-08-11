@@ -59,18 +59,20 @@ const Header = ({
         {/* Search & Actions */}
         <div className="header-actions">
           {/* Search Box */}
-          <div className="header-search desktop-nav-links">
-            <Search size={16} className="header-search-icon" />
-            <input
-              type="text"
-              placeholder="Search gifts, plushies..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (activePage !== 'shop') setActivePage('shop');
-              }}
-            />
-          </div>
+          {activePage !== 'home' && (
+            <div className="header-search desktop-nav-links">
+              <Search size={16} className="header-search-icon" />
+              <input
+                type="text"
+                placeholder="Search gifts, plushies..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (activePage !== 'shop') setActivePage('shop');
+                }}
+              />
+            </div>
+          )}
 
           {/* Wishlist Icon */}
           <button 
@@ -97,7 +99,7 @@ const Header = ({
           </button>
 
           {/* Admin Toggle */}
-          {isAdmin ? (
+          {isAdmin && (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button onClick={() => setActivePage('admin')} className="header-admin-panel-btn">
                 <ShieldCheck size={16} /> Admin Panel
@@ -106,10 +108,6 @@ const Header = ({
                 Exit
               </button>
             </div>
-          ) : (
-            <button onClick={() => setIsAdminModalOpen(true)} className="header-admin-btn">
-              <ShieldCheck size={16} /> Admin Login
-            </button>
           )}
 
           {/* Mobile Menu Toggle */}

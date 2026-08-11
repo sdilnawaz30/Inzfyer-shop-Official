@@ -38,6 +38,8 @@ const AdminPanel = ({
   const [products, setProducts] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
 
   useEffect(() => {
     const fetchAdminData = async () => {
@@ -60,6 +62,75 @@ const AdminPanel = ({
     };
     fetchAdminData();
   }, [onLogout, showToast]);
+
+  const handleSaveProductClick = (product = null) => {
+    if (product) {
+      setEditingProduct({
+        ...product,
+        features: Array.isArray(product.features) ? product.features.join(', ') : (product.features || '')
+      });
+    } else {
+      setEditingProduct({
+        id: `PROD-${Date.now()}`,
+        name: '',
+        price: '',
+        originalPrice: '',
+        image: '',
+        hoverImage: '',
+        description: '',
+        stock: '',
+        features: '',
+        category: '',
+        isNew: false,
+        bestseller: false,
+      });
+    }
+    setIsProductModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      setProducts(prev => prev.filter(p => p.id !== id));
+      try {
+        await axios.post('/api/admin/action', { action: 'deleteProduct', payload: { id } });
+        showToast('Product deleted', 'success');
+      } catch (err) {
+        showToast('Failed to delete product', 'error');
+      }
+    }
+  };
+
+  const handleUpdateStock = async (id, newStock) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
+    try {
+      await axios.post('/api/admin/action', { action: 'updateStock', payload: { id, stock: newStock } });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleImageUpload = async (file, field) => {
+    if (!file) return;
+    const toastId = Math.random().toString(36).substr(2, 9);
+    // Simple uploading indicator
+    showToast(`Uploading ${field === 'image' ? 'Main Image' : 'Hover Image'}...`, 'success');
+    
+    try {
+      const response = await fetch(`/api/admin/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      const data = await response.json();
+      if (response.ok && data.url) {
+        setEditingProduct(prev => ({ ...prev, [field]: data.url }));
+        showToast(`Image uploaded successfully!`, 'success');
+      } else {
+        throw new Error(data.message || 'Upload failed');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   // Calculated Metrics for Glass Cards
   const totalProducts = products.length;
@@ -328,7 +399,7 @@ const AdminPanel = ({
             onCompleteSale={(cartItems, saleRecord) => {
               salesHistory.push(saleRecord);
               cartItems.forEach(item => {
-                onUpdateStock(item.id, Math.max(0, item.stock - item.qty));
+                handleUpdateStock(item.id, Math.max(0, item.stock - item.qty));
               });
             }} 
           />
@@ -351,7 +422,7 @@ const AdminPanel = ({
                 </div>
               </div>
 
-              <button onClick={() => onSaveProduct()} className="btn btn-primary">
+              <button onClick={() => handleSaveProductClick()} className="btn btn-primary">
                 <Plus size={18} /> Add Product
               </button>
             </div>
@@ -388,10 +459,10 @@ const AdminPanel = ({
                         </td>
                         <td style={{ padding: '0.85rem' }}>⭐ {p.rating}</td>
                         <td style={{ padding: '0.85rem', textAlign: 'right' }}>
-                          <button onClick={() => onSaveProduct(p)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', marginRight: '0.4rem' }}>
+                          <button onClick={() => handleSaveProductClick(p)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', marginRight: '0.4rem' }}>
                             <Edit size={16} />
                           </button>
-                          <button onClick={() => onDeleteProduct(p)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', color: '#ef4444' }}>
+                          <button onClick={() => handleDeleteProduct(p.id)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', color: '#ef4444' }}>
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -720,6 +791,107 @@ const AdminPanel = ({
           </div>
         )}
       </div>
+
+      {/* Product Modal */}
+      {isProductModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="glass glass-card" style={{ background: '#fff', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#2C181B' }}>{editingProduct?.id?.startsWith('PROD-') && !editingProduct.name ? 'Add New Product' : 'Edit Product'}</h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const payload = {
+                ...editingProduct,
+                price: Number(editingProduct.price),
+                originalPrice: Number(editingProduct.originalPrice) || 0,
+                stock: Number(editingProduct.stock),
+                features: typeof editingProduct.features === 'string' 
+                  ? editingProduct.features.split(',').map(f => f.trim()).filter(Boolean) 
+                  : editingProduct.features
+              };
+              
+              const isEdit = products.some(p => p.id === payload.id);
+              if (isEdit) {
+                setProducts(prev => prev.map(p => p.id === payload.id ? payload : p));
+              } else {
+                setProducts(prev => [...prev, payload]);
+              }
+              
+              try {
+                await axios.post('/api/admin/action', { action: 'saveProduct', payload });
+                showToast('Product saved successfully!', 'success');
+              } catch (err) {
+                showToast('Failed to save product on server', 'error');
+              }
+              setIsProductModalOpen(false);
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Product Name</label>
+                  <input required type="text" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Category</label>
+                  <input required type="text" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Price (₹)</label>
+                  <input required type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Orig Price (₹)</label>
+                  <input type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.originalPrice} onChange={e => setEditingProduct({...editingProduct, originalPrice: e.target.value})} />
+                </div>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Stock</label>
+                  <input required type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.stock} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Main Image (Upload or URL)</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], 'image')} style={{ display: 'none' }} id="upload-image" />
+                    <label htmlFor="upload-image" className="btn btn-ghost" style={{ padding: '0.75rem', cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem' }}>Upload File</label>
+                    <input required type="text" style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.image} onChange={e => setEditingProduct({...editingProduct, image: e.target.value})} placeholder="https://..." />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Hover Image (Upload or URL)</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], 'hoverImage')} style={{ display: 'none' }} id="upload-hover-image" />
+                    <label htmlFor="upload-hover-image" className="btn btn-ghost" style={{ padding: '0.75rem', cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem' }}>Upload File</label>
+                    <input required type="text" style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.hoverImage} onChange={e => setEditingProduct({...editingProduct, hoverImage: e.target.value})} placeholder="https://..." />
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Description</label>
+                <textarea required rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Features (Comma separated)</label>
+                <input required type="text" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.features} onChange={e => setEditingProduct({...editingProduct, features: e.target.value})} placeholder="Handmade, Premium Quality, Fast Delivery" />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
+                  <input type="checkbox" checked={editingProduct.isNew} onChange={e => setEditingProduct({...editingProduct, isNew: e.target.checked})} />
+                  Mark as New
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
+                  <input type="checkbox" checked={editingProduct.bestseller} onChange={e => setEditingProduct({...editingProduct, bestseller: e.target.checked})} />
+                  Mark as Bestseller
+                </label>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn btn-ghost" style={{ padding: '0.75rem 1.5rem', color: '#5C4347' }}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Save Product</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

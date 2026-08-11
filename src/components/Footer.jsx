@@ -19,7 +19,7 @@ const Footer = ({ setActivePage, showToast }) => {
       borderTop: '1px solid rgba(244, 114, 182, 0.25)',
       marginTop: '4rem',
       paddingTop: '3.5rem',
-      paddingBottom: '2rem',
+      paddingBottom: '6rem',
       color: '#4b5563'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
@@ -129,16 +129,45 @@ const Footer = ({ setActivePage, showToast }) => {
         }}>
           <div>
             <div style={{ marginBottom: '0.5rem' }}>
-              © {new Date().getFullYear()} INZFYER Luxury Gifts. Handcrafted with <Heart size={12} color="#be185d" fill="#be185d" style={{ display: 'inline' }} /> for sweet moments.
+              © {new Date().getFullYear()} INZFYER Luxury Gifts. All Rights Reserved. Handcrafted with <Heart size={12} color="#be185d" fill="#be185d" style={{ display: 'inline' }} /> for sweet moments.
             </div>
             <div>
               Designed by - <a href="https://wisdo-designs.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#be185d', textDecoration: 'none', fontWeight: 600 }}>Wisdo Designs</a>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '1.25rem' }}>
-            <span>Privacy Policy</span>
-            <span>Terms of Service</span>
-            <span>Refund & Packaging Policy</span>
+          <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <span 
+              onClick={() => setActivePage('privacy')}
+              style={{ cursor: 'pointer', transition: 'color 0.2s ease' }}
+              onMouseOver={(e) => e.target.style.color = '#be185d'}
+              onMouseOut={(e) => e.target.style.color = '#9ca3af'}
+            >
+              Privacy Policy
+            </span>
+            <span 
+              onClick={() => setActivePage('terms')}
+              style={{ cursor: 'pointer', transition: 'color 0.2s ease' }}
+              onMouseOver={(e) => e.target.style.color = '#be185d'}
+              onMouseOut={(e) => e.target.style.color = '#9ca3af'}
+            >
+              Terms & Conditions
+            </span>
+            <span 
+              onClick={() => setActivePage('refund')}
+              style={{ cursor: 'pointer', transition: 'color 0.2s ease' }}
+              onMouseOver={(e) => e.target.style.color = '#be185d'}
+              onMouseOut={(e) => e.target.style.color = '#9ca3af'}
+            >
+              Cancellation & Refund policy
+            </span>
+            <span 
+              onClick={() => setActivePage('shipping')}
+              style={{ cursor: 'pointer', transition: 'color 0.2s ease' }}
+              onMouseOver={(e) => e.target.style.color = '#be185d'}
+              onMouseOut={(e) => e.target.style.color = '#9ca3af'}
+            >
+              Shipping & Delivery Policy
+            </span>
           </div>
         </div>
       </div>
