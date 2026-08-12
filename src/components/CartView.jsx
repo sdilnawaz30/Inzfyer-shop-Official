@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Gift, Minus, Plus, ShoppingBag, Sparkles, Trash2, ArrowRight } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
 
 const CartView = ({ 
   cart, 
@@ -105,7 +106,7 @@ const CartView = ({
                     padding: '1.25rem'
                   }}
                 >
-                  <img 
+                  <ResponsiveImage 
                     src={item.image} 
                     alt={item.name} 
                     style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '14px', background: '#fdf2f8' }} 
@@ -138,8 +139,15 @@ const CartView = ({
                     </button>
                     <span style={{ padding: '0 0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>{item.qty}</span>
                     <button 
-                      onClick={() => onUpdateQty(item.id, item.qty + 1)}
-                      style={{ padding: '0.3rem 0.6rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                      onClick={() => onUpdateQty(item.id, item.qty + 1, item.stock)}
+                      disabled={item.stock !== undefined && item.qty >= item.stock}
+                      style={{ 
+                        padding: '0.3rem 0.6rem', 
+                        border: 'none', 
+                        background: 'none', 
+                        cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
+                        opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.5 : 1
+                      }}
                     >
                       <Plus size={14} />
                     </button>

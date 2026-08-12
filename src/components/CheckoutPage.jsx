@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, ShieldCheck, CreditCard, Loader2 } from 'lucide-react';
-import { load } from '@cashfreepayments/cashfree-js';
+import ResponsiveImage from './ResponsiveImage';
 import axios from 'axios';
 
 const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo }) => {
@@ -17,22 +17,17 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
     pincode: ''
   });
 
-  const [cashfree, setCashfree] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  useEffect(() => {
-    const initializeCashfree = async () => {
-      try {
-        const cf = await load({
-          mode: 'sandbox', // Use 'production' for live environment
-        });
-        setCashfree(cf);
-      } catch (err) {
-        console.error("Failed to initialize Cashfree SDK", err);
-      }
-    };
-    initializeCashfree();
-  }, []);
+  const [idempotencyKey] = useState(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  });
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const discount = appliedPromo ? subtotal * 0.1 : 0;
@@ -54,63 +49,28 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
     setStep('processing');
     
     try {
-      const orderId = `INZ-${Math.floor(100000 + Math.random() * 900000)}`;
-      
-      // We no longer send the total amount; backend recalculates it securely.
       const createOrderRes = await axios.post('/api/create-order', {
         items: cart.map(item => ({ id: item.id, qty: item.qty })),
-        orderId,
-        customerDetails: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.mobile
-        }
+        customerDetails: formData,
+        idempotencyKey
       });
       
-      const sessionId = createOrderRes.data.payment_session_id;
-
-      if (cashfree) {
-        let checkoutOptions = {
-          paymentSessionId: sessionId,
-          redirectTarget: "_modal",
-          components: ["order-details", "upi"], // Only show UPI options
-        };
-
-        cashfree.checkout(checkoutOptions).then(async (result) => {
-          if (result.error) {
-            console.error("Cashfree checkout error:", result.error);
-            setStep('payment');
-            return;
-          }
-          if (result.redirect) {
-            console.log("Payment will be redirected");
-            return;
-          }
-          if (result.paymentDetails) {
-            try {
-              const verifyRes = await axios.post('/api/verify-payment', { orderId });
-              
-              if (verifyRes.data.success) {
-                onCompleteCheckout(verifyRes.data.orderData);
-                setActivePage('order-success');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              } else {
-                alert("Payment verification failed. Please contact support.");
-                setStep('payment');
-                setIsProcessing(false);
-              }
-            } catch (err) {
-              console.error("Verification error", err);
-              alert("Payment verification encountered an issue.");
-              setStep('payment');
-              setIsProcessing(false);
-            }
-          }
-        });
+      if (createOrderRes.data.success) {
+        const orderNum = createOrderRes.data.orderData.orderId || createOrderRes.data.orderData.orderNumber;
+        const contact = formData.email || formData.mobile;
+        
+        onCompleteCheckout(createOrderRes.data.orderData);
+        window.history.pushState(null, '', `/order-success?id=${orderNum}&contact=${encodeURIComponent(contact)}`);
+        setActivePage('order-success');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        alert("Failed to process order.");
+        setStep('payment');
+        setIsProcessing(false);
       }
     } catch (error) {
       console.error("Error creating order:", error);
-      alert("Failed to initiate secure checkout. Please try again later.");
+      alert(error.response?.data?.message || "Failed to initiate secure checkout. Please try again later.");
       setStep('payment');
       setIsProcessing(false);
     }
@@ -153,13 +113,13 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                   </div>
                   <div>
                     <label className="form-label">Mobile Number *</label>
-                    <input type="tel" required pattern="[0-9]{10}" title="10 digit mobile number" value={formData.mobile} onChange={(e) => setFormData({...formData, mobile: e.target.value})} placeholder="10-digit mobile number" />
+                    <input type="tel" required pattern="[6-9][0-9]{9}" title="Valid 10-digit Indian mobile number" value={formData.mobile} onChange={(e) => setFormData({...formData, mobile: e.target.value})} placeholder="10-digit mobile number" />
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label className="form-label">Email Address (Optional)</label>
-                  <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="For order updates" />
+                  <label className="form-label">Email Address *</label>
+                  <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="For order updates" />
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
@@ -209,7 +169,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
               </div>
 
               <form onSubmit={handlePaymentSubmit}>
-                <button type="submit" className="btn btn-primary" disabled={!cashfree || isProcessing} style={{ width: '100%', padding: '1.1rem', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+                <button type="submit" className="btn btn-primary" disabled={isProcessing} style={{ width: '100%', padding: '1.1rem', fontSize: '1.1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
                   <ShieldCheck size={20} /> {isProcessing ? 'Processing Securely...' : `Pay Securely ₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
                 </button>
                 <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.75rem', marginTop: '1rem' }}>
@@ -251,7 +211,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
           <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1.25rem' }}>
             {cart.map(item => (
               <div key={item.id} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <img src={item.image} alt={item.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '10px', background: '#fdf2f8' }} />
+                <ResponsiveImage src={item.image} alt={item.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '10px', background: '#fdf2f8' }} />
                 <div style={{ flexGrow: 1 }}>
                   <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.2rem' }}>{item.name}</h4>
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Qty: {item.qty}</div>

@@ -18,10 +18,8 @@ const Header = ({
 
   const navItems = [
     { id: 'home', label: 'Home' },
-    { id: 'shop', label: 'Shop' },
+    { id: 'shop', label: 'Shop All' },
     { id: 'my-orders', label: 'My Orders' },
-    { id: 'wishlist', label: 'Wishlist', badge: wishlistCount },
-    { id: 'cart', label: 'Cart', badge: cartCount },
     { id: 'about', label: 'About' },
     { id: 'contact', label: 'Contact' },
   ];
@@ -30,8 +28,7 @@ const Header = ({
     <header className="glass-header">
       {/* Top Promo Banner */}
       <div className="header-banner">
-        <Sparkles size={14} />
-        <span>Starting offers from 10-20% on every orders </span>
+        <span>Starting offers upto 10% for all products</span>
       </div>
 
       <div className="header-main">

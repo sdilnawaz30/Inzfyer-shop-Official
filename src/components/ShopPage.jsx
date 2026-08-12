@@ -1,40 +1,89 @@
-import React, { useState, useMemo } from 'react';
-import { Heart, Package, Search, ShoppingBag, SlidersHorizontal, Star, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Package, Search, ShoppingBag, SlidersHorizontal, Star, X, Loader2 } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
+import { fetchCategories, fetchStorefrontProducts } from '../utils/productQueries';
 
-const ShopPage = ({ 
-  products, 
+const ShopPage = ({
   onAddToCart, 
   onToggleWishlist, 
   wishlist, 
   onSelectProduct,
   searchQuery,
-  setSearchQuery
+  setSearchQuery,
+  selectedCategory,
+  setSelectedCategory
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [priceLimit, setPriceLimit] = useState(5000);
   const [sortBy, setSortBy] = useState('popular');
   const [onlyInStock, setOnlyInStock] = useState(false);
 
-  const categories = ['All', ...new Set(products.map(p => p.category))];
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const filteredProducts = useMemo(() => {
-    return products
-      .filter(p => {
-        const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                              p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              p.category.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesPrice = p.price <= priceLimit;
-        const matchesStock = !onlyInStock || p.stock > 0;
-        return matchesCategory && matchesSearch && matchesPrice && matchesStock;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'price-low') return a.price - b.price;
-        if (sortBy === 'price-high') return b.price - a.price;
-        if (sortBy === 'rating') return b.rating - a.rating;
-        return 0;
-      });
-  }, [products, selectedCategory, searchQuery, priceLimit, onlyInStock, sortBy]);
+  // Debounce search query to avoid too many DB calls
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const cats = await fetchCategories();
+      setCategories([{ id: 'All', name: 'All' }, ...cats]);
+    };
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoading(true);
+      const categoryId = selectedCategory === 'All' ? null : categories.find(c => c.name === selectedCategory)?.id;
+      
+      const { products: data, totalCount: count } = await fetchStorefrontProducts({
+        categoryId,
+        searchQuery: debouncedSearch,
+        priceLimit,
+        inStockOnly: onlyInStock,
+        sortBy
+      }, 1, 12);
+      
+      setProducts(data);
+      setTotalCount(count);
+      setPage(1);
+      setIsLoading(false);
+    };
+
+    if (categories.length > 0) {
+      loadProducts();
+    }
+  }, [debouncedSearch, selectedCategory, priceLimit, onlyInStock, sortBy, categories]);
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    const nextPage = page + 1;
+    const categoryId = selectedCategory === 'All' ? null : categories.find(c => c.name === selectedCategory)?.id;
+    
+    const { products: data } = await fetchStorefrontProducts({
+      categoryId,
+      searchQuery: debouncedSearch,
+      priceLimit,
+      inStockOnly: onlyInStock,
+      sortBy
+    }, nextPage, 12);
+    
+    setProducts(prev => [...prev, ...data]);
+    setPage(nextPage);
+    setIsLoadingMore(false);
+  };
 
   return (
     <div className="animate-fade-in">
@@ -49,11 +98,26 @@ const ShopPage = ({
       </div>
 
       {/* Main Grid with Filter Bar & Products */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="shop-layout">
         
+        {/* Mobile Filters Toggle Button */}
+        <div className="mobile-only" style={{ marginBottom: '1rem' }}>
+          <button 
+            onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+            className="btn btn-secondary" 
+            style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <SlidersHorizontal size={18} />
+              {isMobileFiltersOpen ? 'Hide Filters' : 'Show Filters'}
+            </div>
+            {isMobileFiltersOpen ? <X size={18} /> : <span>+</span>}
+          </button>
+        </div>
+
         {/* Filters Sidebar */}
-        <div className="glass glass-card" style={{ background: '#ffffff', position: 'sticky', top: '100px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid #fce7f3', paddingBottom: '0.75rem' }}>
+        <div className={`glass glass-card filter-sidebar ${isMobileFiltersOpen ? 'open' : ''}`} style={{ background: '#ffffff', position: 'sticky', top: '100px' }}>
+          <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid #fce7f3', paddingBottom: '0.75rem' }}>
             <SlidersHorizontal size={18} color="#db2777" />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1f2937' }}>Filter Products</h3>
           </div>
@@ -90,22 +154,22 @@ const ShopPage = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.name)}
                   style={{
                     textAlign: 'left',
                     padding: '0.55rem 0.85rem',
                     borderRadius: '10px',
                     fontSize: '0.88rem',
-                    fontWeight: selectedCategory === cat ? 700 : 500,
-                    background: selectedCategory === cat ? '#fce7f3' : 'transparent',
-                    color: selectedCategory === cat ? '#db2777' : '#4b5563',
+                    fontWeight: selectedCategory === cat.name ? 700 : 500,
+                    background: selectedCategory === cat.name ? '#fce7f3' : 'transparent',
+                    color: selectedCategory === cat.name ? '#db2777' : '#4b5563',
                     border: 'none',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {cat}
+                  {cat.name}
                 </button>
               ))}
             </div>
@@ -164,7 +228,7 @@ const ShopPage = ({
           {/* Top Sort & Summary Bar */}
           <div className="glass glass-card" style={{ background: '#ffffff', padding: '0.85rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-              Showing <strong style={{ color: '#1f2937' }}>{filteredProducts.length}</strong> products
+              Showing <strong style={{ color: '#1f2937' }}>{totalCount || 0}</strong> products
               {selectedCategory !== 'All' && <span> in <strong style={{ color: '#db2777' }}>{selectedCategory}</strong></span>}
             </div>
 
@@ -184,7 +248,13 @@ const ShopPage = ({
           </div>
 
           {/* Products Grid */}
-          {filteredProducts.length === 0 ? (
+          {isLoading ? (
+            <div className="grid-products">
+              {Array(8).fill(0).map((_, i) => (
+                <div key={i} className="product-card skeleton-card" style={{ height: '380px', background: '#f9fafb', borderRadius: '15px' }}></div>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
             <div className="glass glass-card" style={{ textAlign: 'center', padding: '4rem 2rem', background: '#ffffff' }}>
               <Package size={48} color="#db2777" style={{ marginBottom: '1rem' }} />
               <h3 style={{ fontSize: '1.3rem', color: '#1f2937', marginBottom: '0.5rem' }}>No products match your filters</h3>
@@ -194,76 +264,91 @@ const ShopPage = ({
               </button>
             </div>
           ) : (
-            <div className="grid-products">
-              {filteredProducts.map((p) => {
-                const inWishlist = wishlist.some(item => item.id === p.id);
-                const isOutOfStock = p.stock === 0;
+            <>
+              <div className="grid-products">
+                {products.map((p) => {
+                  const inWishlist = wishlist.some(item => item.id === p.id);
+                  const isOutOfStock = p.stock === 0;
 
-                return (
-                  <div key={p.id} className="product-card">
-                    <div className="product-image-container">
-                      {p.tag && (
-                        <span className="product-tag badge badge-pink">{p.tag}</span>
-                      )}
-                      <button 
-                        onClick={() => onToggleWishlist(p)} 
-                        className={`wishlist-btn ${inWishlist ? 'active' : ''}`}
-                      >
-                        <Heart size={18} fill={inWishlist ? '#db2777' : 'none'} />
-                      </button>
-                      <img 
-                        src={p.image} 
-                        alt={p.name} 
-                        className="product-image"
-                        onClick={() => onSelectProduct(p)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </div>
-
-                    <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
-                      <div>
-                        <span style={{ fontSize: '0.78rem', color: '#7e22ce', fontWeight: 600 }}>{p.category}</span>
-                        <h3 
-                          onClick={() => onSelectProduct(p)}
-                          style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1f2937', margin: '0.25rem 0 0.5rem 0', cursor: 'pointer' }}
-                        >
-                          {p.name}
-                        </h3>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-                          <Star size={14} fill="#f59e0b" color="#f59e0b" />
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{p.rating}</span>
-                          <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>({p.reviewsCount})</span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid #fce7f3' }}>
-                        <div>
-                          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#db2777' }}>₹{p.price.toLocaleString('en-IN')}</span>
-                          {p.originalPrice && (
-                            <span style={{ fontSize: '0.82rem', color: '#9ca3af', textDecoration: 'line-through', marginLeft: '0.3rem' }}>
-                              ₹{p.originalPrice.toLocaleString('en-IN')}
-                            </span>
-                          )}
-                        </div>
+                  return (
+                    <div key={p.id} className="product-card">
+                      <div className="product-image-container">
+                        {p.tag && (
+                          <span className="product-tag badge badge-pink">{p.tag}</span>
+                        )}
                         <button 
-                          onClick={() => onAddToCart(p)}
-                          disabled={isOutOfStock}
-                          className="btn btn-primary"
-                          style={{
-                            padding: '0.5rem 0.9rem',
-                            fontSize: '0.85rem',
-                            opacity: isOutOfStock ? 0.5 : 1,
-                            cursor: isOutOfStock ? 'not-allowed' : 'pointer'
-                          }}
+                          onClick={() => onToggleWishlist(p)} 
+                          className={`wishlist-btn ${inWishlist ? 'active' : ''}`}
                         >
-                          {isOutOfStock ? 'Sold Out' : <><ShoppingBag size={16} /> Add</>}
+                          <Heart size={18} fill={inWishlist ? '#db2777' : 'none'} />
                         </button>
+                        <ResponsiveImage 
+                          src={p.image} 
+                          alt={p.name} 
+                          className="product-image"
+                          onClick={() => onSelectProduct(p)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </div>
+
+                      <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+                        <div>
+                          <span style={{ fontSize: '0.78rem', color: '#7e22ce', fontWeight: 600 }}>{p.category}</span>
+                          <h3 
+                            onClick={() => onSelectProduct(p)}
+                            style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1f2937', margin: '0.25rem 0 0.5rem 0', cursor: 'pointer' }}
+                          >
+                            {p.name}
+                          </h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
+                            <Star size={14} fill="#f59e0b" color="#f59e0b" />
+                            <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{p.rating}</span>
+                            <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>({p.reviewsCount})</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid #fce7f3' }}>
+                          <div>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#db2777' }}>₹{p.price.toLocaleString('en-IN')}</span>
+                            {p.originalPrice && (
+                              <span style={{ fontSize: '0.82rem', color: '#9ca3af', textDecoration: 'line-through', marginLeft: '0.3rem' }}>
+                                ₹{p.originalPrice.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => onAddToCart(p)}
+                            disabled={isOutOfStock}
+                            className="btn btn-primary"
+                            style={{
+                              padding: '0.5rem 0.9rem',
+                              fontSize: '0.85rem',
+                              opacity: isOutOfStock ? 0.5 : 1,
+                              cursor: isOutOfStock ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            {isOutOfStock ? 'Sold Out' : <><ShoppingBag size={16} /> Add</>}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+              
+              {products.length < totalCount && (
+                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                  <button 
+                    onClick={handleLoadMore} 
+                    className="btn btn-ghost" 
+                    disabled={isLoadingMore}
+                    style={{ padding: '0.75rem 2.5rem', fontWeight: 600 }}
+                  >
+                    {isLoadingMore ? <Loader2 size={20} className="spin" /> : 'Load More'}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

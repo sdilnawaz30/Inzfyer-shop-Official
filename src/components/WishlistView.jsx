@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
 
 const WishlistView = ({ wishlist, onRemoveFromWishlist, onAddToCart, setActivePage, onSelectProduct }) => {
   return (
@@ -49,7 +50,7 @@ const WishlistView = ({ wishlist, onRemoveFromWishlist, onAddToCart, setActivePa
                 >
                   <Trash2 size={18} color="#ef4444" />
                 </button>
-                <img 
+                <ResponsiveImage 
                   src={item.image} 
                   alt={item.name} 
                   className="product-image"

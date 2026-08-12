@@ -1,33 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, Gift, ShoppingBag, Star, ShieldCheck, Truck, ArrowLeft, Zap, Sparkles, ZoomIn, Check, RotateCcw } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
+import { fetchRelatedProducts } from '../utils/productQueries';
 
-const ProductDetailPage = ({ product, products = [], onClose, onAddToCart, onBuyNow, onToggleWishlist, wishlist, onSelectProduct }) => {
+const ProductDetailPage = ({ product, onClose, onAddToCart, onBuyNow, onToggleWishlist, wishlist, onSelectProduct }) => {
   const [selectedImgIndex, setSelectedImgIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [giftNote, setGiftNote] = useState('');
   const [includeGiftWrap, setIncludeGiftWrap] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
 
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [isLoadingRelated, setIsLoadingRelated] = useState(true);
+
+  useEffect(() => {
+    const loadRelated = async () => {
+      setIsLoadingRelated(true);
+      const data = await fetchRelatedProducts(product.category_id, product.id, 4);
+      setRelatedProducts(data);
+      setIsLoadingRelated(false);
+    };
+    if (product) {
+      loadRelated();
+    }
+  }, [product]);
+
+  useEffect(() => {
+    if (product) {
+      document.title = `${product.name} | Cute Gifts | INZFYER`;
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', `Buy ${product.name} at best price. Handmade cute gift perfect for birthdays, surprises & daily use. COD available.`);
+      }
+
+      // Add JSON-LD Schema
+      const schema = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": product.name,
+        "image": [
+          product.image,
+          ...(product.images ? product.images.map(img => img.image_url) : [])
+        ],
+        "description": product.description,
+        "sku": product.sku || `INZ-${product.id}`,
+        "offers": {
+          "@type": "Offer",
+          "url": window.location.href,
+          "priceCurrency": "INR",
+          "price": product.price,
+          "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          "itemCondition": "https://schema.org/NewCondition"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": product.rating,
+          "reviewCount": product.reviewsCount || 1
+        }
+      };
+
+      let scriptTag = document.querySelector('#product-json-ld');
+      if (!scriptTag) {
+        scriptTag = document.createElement('script');
+        scriptTag.id = 'product-json-ld';
+        scriptTag.type = 'application/ld+json';
+        document.head.appendChild(scriptTag);
+      }
+      scriptTag.textContent = JSON.stringify(schema);
+    }
+    
+    return () => {
+      document.title = "Cute Handmade Gifts Online | INZFYER India";
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', "Shop cute handmade plushies, keychains & aesthetic gifts at affordable prices. Perfect for birthdays & surprises. COD available.");
+      }
+      const scriptTag = document.querySelector('#product-json-ld');
+      if (scriptTag) {
+        scriptTag.remove();
+      }
+    };
+  }, [product]);
+
   if (!product) return null;
 
   // Generate gallery images array (main image + complementary angles/details)
-  const galleryImages = [
-    product.image,
-    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=800&q=80',
-  ];
+  const galleryImages = product.images?.length > 0
+    ? [...product.images].sort((a,b) => a.sort_order - b.sort_order).map(img => img.image_url)
+    : [product.image];
 
   const inWishlist = wishlist.some(item => item.id === product.id);
   const isOutOfStock = product.stock === 0;
   const discountPercent = product.originalPrice 
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
-
-  // Filter related products (same category or others, excluding current product)
-  const relatedProducts = products
-    .filter(p => p.id !== product.id && (p.category === product.category || p.isFeatured))
-    .slice(0, 4);
 
   const handleAddToCart = () => {
     onAddToCart({
@@ -101,9 +167,10 @@ const ProductDetailPage = ({ product, products = [], onClose, onAddToCart, onBuy
                 </span>
               )}
 
-              <img 
+              <ResponsiveImage 
                 src={galleryImages[selectedImgIndex]} 
                 alt={product.name} 
+                priority={true}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -152,7 +219,7 @@ const ProductDetailPage = ({ product, products = [], onClose, onAddToCart, onBuy
                     opacity: selectedImgIndex === idx ? 1 : 0.7
                   }}
                 >
-                  <img src={img} alt={`Thumb ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <ResponsiveImage src={img} alt={`Thumb ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ))}
             </div>
@@ -214,9 +281,24 @@ const ProductDetailPage = ({ product, products = [], onClose, onAddToCart, onBuy
               </div>
 
               {/* Description */}
-              <p style={{ color: '#5C4347', fontSize: '1.02rem', lineHeight: '1.65', marginBottom: '1.75rem' }}>
+              <p style={{ color: '#5C4347', fontSize: '1.02rem', lineHeight: '1.65', marginBottom: '1.25rem' }}>
                 {product.description}
               </p>
+
+              {/* Product Highlights */}
+              <ul style={{ paddingLeft: '1.25rem', marginBottom: '1.5rem', color: '#5C4347', fontSize: '0.95rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <li>✨ Hand-crafted with premium, child-safe materials</li>
+                <li>🎁 Arrives beautifully packaged and ready to gift</li>
+                <li>💖 Guaranteed to make them smile instantly</li>
+              </ul>
+
+              {/* Perfect For */}
+              <div style={{ marginBottom: '1.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2C181B', marginRight: '0.2rem' }}>Perfect for:</span>
+                <span className="badge badge-pink" style={{ background: '#FAF0ED', color: '#8C2E3C', borderColor: 'rgba(224, 150, 137, 0.4)' }}>Birthdays</span>
+                <span className="badge badge-pink" style={{ background: '#FAF0ED', color: '#8C2E3C', borderColor: 'rgba(224, 150, 137, 0.4)' }}>Anniversaries</span>
+                <span className="badge badge-pink" style={{ background: '#FAF0ED', color: '#8C2E3C', borderColor: 'rgba(224, 150, 137, 0.4)' }}>Surprises</span>
+              </div>
 
               {/* Gift Box & Satin Ribbon Customization */}
               <div style={{
@@ -341,6 +423,23 @@ const ProductDetailPage = ({ product, products = [], onClose, onAddToCart, onBuy
                 <span>7-Day boutique guarantee</span>
               </div>
             </div>
+
+            {/* FAQs */}
+            <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.1rem', color: '#2C181B', fontWeight: 700, marginBottom: '0.5rem' }}>Frequently Asked Questions</h3>
+              <details style={{ background: '#FAF0ED', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(224, 150, 137, 0.3)' }}>
+                <summary style={{ fontWeight: 600, color: '#8C2E3C', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>How long does delivery take?</summary>
+                <p style={{ marginTop: '0.75rem', color: '#5C4347', fontSize: '0.9rem', lineHeight: '1.5' }}>Most orders are processed within 24 hours and delivered within 5-7 business days across India. Express shipping options are available at checkout.</p>
+              </details>
+              <details style={{ background: '#FAF0ED', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(224, 150, 137, 0.3)' }}>
+                <summary style={{ fontWeight: 600, color: '#8C2E3C', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Is cash on delivery available?</summary>
+                <p style={{ marginTop: '0.75rem', color: '#5C4347', fontSize: '0.9rem', lineHeight: '1.5' }}>Yes! We offer Cash on Delivery (COD) for most pin codes across India.</p>
+              </details>
+              <details style={{ background: '#FAF0ED', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(224, 150, 137, 0.3)' }}>
+                <summary style={{ fontWeight: 600, color: '#8C2E3C', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>How do returns work?</summary>
+                <p style={{ marginTop: '0.75rem', color: '#5C4347', fontSize: '0.9rem', lineHeight: '1.5' }}>We have a hassle-free 7-day return/exchange policy for damaged or defective items. Your satisfaction is our absolute priority.</p>
+              </details>
+            </div>
           </div>
         </div>
       </div>
@@ -358,66 +457,80 @@ const ProductDetailPage = ({ product, products = [], onClose, onAddToCart, onBuy
           </div>
 
           <div className="grid-products">
-            {relatedProducts.map((rel) => {
-              const relInWishlist = wishlist.some(item => item.id === rel.id);
-              return (
-                <div key={rel.id} className="product-card">
-                  <div className="product-image-container">
-                    {rel.tag && (
-                      <span className="product-tag badge badge-pink">{rel.tag}</span>
-                    )}
-                    <button 
-                      onClick={() => onToggleWishlist(rel)} 
-                      className={`wishlist-btn ${relInWishlist ? 'active' : ''}`}
-                    >
-                      <Heart size={18} fill={relInWishlist ? '#A63A4B' : 'none'} color={relInWishlist ? '#A63A4B' : '#94757A'} />
-                    </button>
-                    <img 
-                      src={rel.image} 
-                      alt={rel.name} 
-                      className="product-image"
-                      onClick={() => { onSelectProduct(rel); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </div>
-
-                  <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
-                    <div>
-                      <span style={{ fontSize: '0.78rem', color: '#8C2E3C', fontWeight: 600 }}>{rel.category}</span>
-                      <h3 
-                        onClick={() => { onSelectProduct(rel); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                        style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2C181B', margin: '0.25rem 0 0.5rem 0', cursor: 'pointer' }}
-                      >
-                        {rel.name}
-                      </h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
-                        <Star size={14} fill="#D97706" color="#D97706" />
-                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{rel.rating}</span>
-                        <span style={{ fontSize: '0.78rem', color: '#94757A' }}>({rel.reviewsCount})</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid #F8D7D0' }}>
-                      <div>
-                        <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#A63A4B' }}>₹{rel.price.toLocaleString('en-IN')}</span>
-                        {rel.originalPrice && (
-                          <span style={{ fontSize: '0.85rem', color: '#94757A', textDecoration: 'line-through', marginLeft: '0.4rem' }}>
-                            ₹{rel.originalPrice.toLocaleString('en-IN')}
-                          </span>
-                        )}
-                      </div>
+            {isLoadingRelated ? (
+              Array(4).fill(0).map((_, i) => (
+                <div key={i} className="product-card skeleton-card" style={{ height: '380px', background: '#f9fafb', borderRadius: '15px' }}></div>
+              ))
+            ) : (
+              relatedProducts.map((rel) => {
+                const relInWishlist = wishlist.some(item => item.id === rel.id);
+                const isRelOutOfStock = rel.stock === 0;
+                
+                return (
+                  <div key={rel.id} className="product-card">
+                    <div className="product-image-container">
+                      {rel.tag && (
+                        <span className="product-tag badge badge-pink">{rel.tag}</span>
+                      )}
                       <button 
-                        onClick={() => onAddToCart(rel)}
-                        className="btn btn-primary"
-                        style={{ padding: '0.5rem 0.9rem', fontSize: '0.85rem' }}
+                        onClick={() => onToggleWishlist(rel)} 
+                        className={`wishlist-btn ${relInWishlist ? 'active' : ''}`}
                       >
-                        <ShoppingBag size={16} /> Add
+                        <Heart size={18} fill={relInWishlist ? '#A63A4B' : 'none'} color={relInWishlist ? '#A63A4B' : '#94757A'} />
                       </button>
+                      <ResponsiveImage 
+                        src={rel.image} 
+                        alt={rel.name} 
+                        className="product-image"
+                        onClick={() => { onSelectProduct(rel); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ fontSize: '0.78rem', color: '#8C2E3C', fontWeight: 600 }}>{rel.category}</span>
+                        <h3 
+                          onClick={() => { onSelectProduct(rel); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2C181B', margin: '0.25rem 0 0.5rem 0', cursor: 'pointer' }}
+                        >
+                          {rel.name}
+                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem' }}>
+                          <Star size={14} fill="#D97706" color="#D97706" />
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{rel.rating}</span>
+                          <span style={{ fontSize: '0.78rem', color: '#94757A' }}>({rel.reviewsCount})</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid #F8D7D0' }}>
+                        <div>
+                          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#A63A4B' }}>₹{rel.price.toLocaleString('en-IN')}</span>
+                          {rel.originalPrice && (
+                            <span style={{ fontSize: '0.85rem', color: '#94757A', textDecoration: 'line-through', marginLeft: '0.4rem' }}>
+                              ₹{rel.originalPrice.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => onAddToCart(rel)}
+                          disabled={isRelOutOfStock}
+                          className="btn btn-primary"
+                          style={{ 
+                            padding: '0.5rem 0.9rem', 
+                            fontSize: '0.85rem',
+                            opacity: isRelOutOfStock ? 0.5 : 1,
+                            cursor: isRelOutOfStock ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {isRelOutOfStock ? 'Sold Out' : <><ShoppingBag size={16} /> Add</>}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </section>
       )}

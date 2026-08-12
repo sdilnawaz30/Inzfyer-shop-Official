@@ -35,6 +35,7 @@ const Footer = ({ setActivePage, showToast }) => {
               <img 
                 src={logoImg} 
                 alt="INZFYER Logo" 
+                loading="lazy"
                 style={{
                   height: '80px',
                   width: 'auto',
@@ -132,7 +133,7 @@ const Footer = ({ setActivePage, showToast }) => {
               © {new Date().getFullYear()} INZFYER Luxury Gifts. All Rights Reserved. Handcrafted with <Heart size={12} color="#be185d" fill="#be185d" style={{ display: 'inline' }} /> for sweet moments.
             </div>
             <div>
-              Designed by - <a href="https://wisdo-designs.vercel.app/" target="_blank" rel="noopener noreferrer" style={{ color: '#be185d', textDecoration: 'none', fontWeight: 600 }}>Wisdo Designs</a>
+              Designed by - <a href="https://wisdotech.in" target="_blank" rel="noopener noreferrer" style={{ color: '#be185d', textDecoration: 'none', fontWeight: 600 }}>Wisdo Tech</a>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>

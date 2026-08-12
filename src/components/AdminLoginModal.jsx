@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Mail, Sparkles, X, ShieldCheck } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
-import axios from 'axios';
-
+import { supabase } from '../lib/supabase';
 const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [email, setEmail] = useState('admin@inzfyer.in');
   const [password, setPassword] = useState('');
@@ -18,14 +17,30 @@ const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
     setError('');
     
     try {
-      const response = await axios.post('/api/admin/login', { password });
-      if (response.data.success) {
-        onLoginSuccess();
-        setPassword('');
-        onClose();
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) throw signInError;
+
+      // Verify admin role from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || profile?.role !== 'admin') {
+        await supabase.auth.signOut();
+        throw new Error('Unauthorized access. Admin privileges required.');
       }
+
+      onLoginSuccess();
+      setPassword('');
+      onClose();
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid admin credentials.');
+      setError(err.message || 'Invalid admin credentials.');
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
   Package, 
@@ -23,10 +23,15 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   RefreshCw,
-  Printer
+  Printer,
+  Tags
 } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
 import logoImg from '../assets/logo.png';
 import PosView from './PosView';
+import ProductModal from './ProductModal';
+import CategoryModal from './CategoryModal';
+import OrderDetailsModal from './OrderDetailsModal';
 
 const AdminPanel = ({ 
   onLogout,
@@ -36,66 +41,142 @@ const AdminPanel = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [stockInAmount, setStockInAmount] = useState(10);
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [salesHistory, setSalesHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  
+  // Orders Tab States
+  const [orderFilter, setOrderFilter] = useState('All');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const fetchAdminData = async () => {
+    setIsLoading(true);
+    try {
+      const [catsResponse, prodsResponse, ordersResponse] = await Promise.all([
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('products').select(`
+          *,
+          category:categories(name),
+          images:product_images(*)
+        `).order('created_at', { ascending: false }),
+        supabase.from('orders').select('*').order('created_at', { ascending: false })
+      ]);
+
+      if (catsResponse.error) throw catsResponse.error;
+      if (prodsResponse.error) throw prodsResponse.error;
+      if (ordersResponse.error) throw ordersResponse.error;
+
+      setCategories(catsResponse.data || []);
+      
+      // Transform products for the UI
+      const transformedProducts = (prodsResponse.data || []).map(p => {
+        // Find primary image or use first one
+        const primaryImage = p.images?.find(img => img.is_primary) || p.images?.[0];
+        return {
+          ...p,
+          categoryName: p.category?.name || 'Uncategorized',
+          imageUrl: primaryImage?.image_url || 'https://images.unsplash.com/photo-1558060370-d644479be6f7?auto=format&fit=crop&w=150&q=80',
+          hoverImage: p.images?.[1]?.image_url || null,
+        };
+      });
+
+      setProducts(transformedProducts);
+      setSalesHistory(ordersResponse.data || []);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to load admin data', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        const response = await axios.get('/api/admin/data');
-        if (response.data.success) {
-          setProducts(response.data.products);
-          setSalesHistory(response.data.orders);
-        }
-      } catch (err) {
-        if (err.response?.status === 401) {
-          showToast('Session expired. Please log in again.', 'error');
-          onLogout();
-        } else {
-          showToast('Failed to load admin data', 'error');
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchAdminData();
   }, [onLogout, showToast]);
 
   const handleSaveProductClick = (product = null) => {
-    if (product) {
-      setEditingProduct({
-        ...product,
-        features: Array.isArray(product.features) ? product.features.join(', ') : (product.features || '')
-      });
-    } else {
-      setEditingProduct({
-        id: `PROD-${Date.now()}`,
-        name: '',
-        price: '',
-        originalPrice: '',
-        image: '',
-        hoverImage: '',
-        description: '',
-        stock: '',
-        features: '',
-        category: '',
-        isNew: false,
-        bestseller: false,
-      });
-    }
+    setEditingProduct(product);
     setIsProductModalOpen(true);
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      setProducts(prev => prev.filter(p => p.id !== id));
+  const handleToggleProductActive = async (id, currentStatus) => {
+    const newStatus = !currentStatus;
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: newStatus } : p));
+    try {
+      const { error } = await supabase.from('products').update({ is_active: newStatus }).eq('id', id);
+      if (error) throw error;
+      showToast(`Product ${newStatus ? 'enabled' : 'disabled'}`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to update status', 'error');
+      // Revert on error
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: currentStatus } : p));
+    }
+  };
+
+  const handleDeleteProduct = async (product) => {
+    if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
+      setProducts(prev => prev.filter(p => p.id !== product.id));
       try {
-        await axios.post('/api/admin/action', { action: 'deleteProduct', payload: { id } });
-        showToast('Product deleted', 'success');
+        const { data: images } = await supabase.from('product_images').select('image_url').eq('product_id', product.id);
+        if (images && images.length > 0) {
+          const filesToDelete = images
+            .map(img => {
+              const match = img.image_url.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
+              return match ? match[1] : null;
+            })
+            .filter(Boolean);
+
+          if (filesToDelete.length > 0) {
+            await supabase.storage.from('product-images').remove(filesToDelete);
+          }
+        }
+        const { error } = await supabase.from('products').delete().eq('id', product.id);
+        if (error) throw error;
+        showToast('Product deleted permanently', 'success');
       } catch (err) {
+        console.error(err);
         showToast('Failed to delete product', 'error');
+        fetchAdminData();
+      }
+    }
+  };
+
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+
+  const handleSaveCategoryClick = (category = null) => {
+    setEditingCategory(category);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleToggleCategoryActive = async (id, currentStatus) => {
+    const newStatus = !currentStatus;
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: newStatus } : c));
+    try {
+      const { error } = await supabase.from('categories').update({ is_active: newStatus }).eq('id', id);
+      if (error) throw error;
+      showToast(`Category ${newStatus ? 'enabled' : 'disabled'}`, 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to update category status', 'error');
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: currentStatus } : c));
+    }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    if (window.confirm(`Are you sure you want to delete category "${category.name}"? Products in this category will become uncategorized.`)) {
+      try {
+        const { error } = await supabase.from('categories').delete().eq('id', category.id);
+        if (error) throw error;
+        setCategories(prev => prev.filter(c => c.id !== category.id));
+        showToast('Category deleted', 'success');
+        fetchAdminData();
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to delete category', 'error');
       }
     }
   };
@@ -103,32 +184,11 @@ const AdminPanel = ({
   const handleUpdateStock = async (id, newStock) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
     try {
-      await axios.post('/api/admin/action', { action: 'updateStock', payload: { id, stock: newStock } });
+      const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', id);
+      if (error) throw error;
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  const handleImageUpload = async (file, field) => {
-    if (!file) return;
-    const toastId = Math.random().toString(36).substr(2, 9);
-    // Simple uploading indicator
-    showToast(`Uploading ${field === 'image' ? 'Main Image' : 'Hover Image'}...`, 'success');
-    
-    try {
-      const response = await fetch(`/api/admin/upload?filename=${encodeURIComponent(file.name)}`, {
-        method: 'POST',
-        body: file,
-      });
-      const data = await response.json();
-      if (response.ok && data.url) {
-        setEditingProduct(prev => ({ ...prev, [field]: data.url }));
-        showToast(`Image uploaded successfully!`, 'success');
-      } else {
-        throw new Error(data.message || 'Upload failed');
-      }
-    } catch (err) {
-      showToast(err.message, 'error');
+      showToast('Failed to update stock', 'error');
     }
   };
 
@@ -160,6 +220,7 @@ const AdminPanel = ({
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'POS', label: 'POS Terminal', icon: Printer },
     { id: 'Products', label: 'Products', icon: Package, badge: totalProducts },
+    { id: 'Categories', label: 'Categories', icon: Tags, badge: categories.length },
     { id: 'Orders', label: 'Orders', icon: ShoppingCart, badge: totalOrders },
     { id: 'Customers', label: 'Customers', icon: Users, badge: customers.length },
     { id: 'Inventory', label: 'Inventory (Stock)', icon: Boxes, badge: lowStockItems.length > 0 ? `${lowStockItems.length} Low` : null },
@@ -171,13 +232,7 @@ const AdminPanel = ({
   }
 
   return (
-    <div className="animate-fade-in" style={{
-      display: 'grid',
-      gridTemplateColumns: '260px 1fr',
-      gap: '2rem',
-      minHeight: '80vh',
-      alignItems: 'start'
-    }}>
+    <div className="animate-fade-in admin-layout">
       {/* Sidebar Navigation - Glass UI */}
       <aside className="glass glass-card" style={{
         padding: '1.75rem 1.25rem',
@@ -437,6 +492,7 @@ const AdminPanel = ({
                     <th style={{ padding: '0.85rem' }}>Price</th>
                     <th style={{ padding: '0.85rem' }}>Stock</th>
                     <th style={{ padding: '0.85rem' }}>Rating</th>
+                    <th style={{ padding: '0.85rem' }}>Status</th>
                     <th style={{ padding: '0.85rem', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
@@ -446,23 +502,37 @@ const AdminPanel = ({
                     .map((p) => (
                       <tr key={p.id} style={{ borderBottom: '1px solid #F8D7D0' }}>
                         <td style={{ padding: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <img src={p.image} alt={p.name} style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover' }} />
+                          <ResponsiveImage src={p.imageUrl} alt={p.name} style={{ width: '42px', height: '42px', borderRadius: '10px', objectFit: 'cover' }} />
                           <span style={{ fontWeight: 700, color: '#2C181B' }}>{p.name}</span>
                         </td>
                         <td style={{ padding: '0.85rem', fontFamily: 'monospace', color: '#5C4347' }}>{p.sku || `INZ-${p.id}`}</td>
-                        <td style={{ padding: '0.85rem', color: '#8C2E3C', fontWeight: 600 }}>{p.category}</td>
-                        <td style={{ padding: '0.85rem', fontWeight: 800, color: '#A63A4B' }}>₹{p.price.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '0.85rem', color: '#8C2E3C', fontWeight: 600 }}>{p.categoryName}</td>
+                        <td style={{ padding: '0.85rem', fontWeight: 800, color: '#A63A4B' }}>
+                          ₹{p.price.toLocaleString('en-IN')}
+                          {p.sale_price && (
+                            <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 600 }}>Sale: ₹{p.sale_price.toLocaleString('en-IN')}</div>
+                          )}
+                        </td>
                         <td style={{ padding: '0.85rem' }}>
                           <span className={`badge ${p.stock < 5 ? 'badge-warning' : 'badge-pink'}`}>
                             {p.stock} units
                           </span>
                         </td>
                         <td style={{ padding: '0.85rem' }}>⭐ {p.rating}</td>
+                        <td style={{ padding: '0.85rem' }}>
+                          <button 
+                            onClick={() => handleToggleProductActive(p.id, p.is_active)}
+                            className={`badge ${p.is_active ? 'badge-success' : 'badge-warning'}`}
+                            style={{ cursor: 'pointer', border: 'none', background: p.is_active ? '#dcfce7' : '#fee2e2', color: p.is_active ? '#166534' : '#991b1b' }}
+                          >
+                            {p.is_active ? 'Active' : 'Disabled'}
+                          </button>
+                        </td>
                         <td style={{ padding: '0.85rem', textAlign: 'right' }}>
                           <button onClick={() => handleSaveProductClick(p)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', marginRight: '0.4rem' }}>
                             <Edit size={16} />
                           </button>
-                          <button onClick={() => handleDeleteProduct(p.id)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', color: '#ef4444' }}>
+                          <button onClick={() => handleDeleteProduct(p)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', color: '#ef4444' }}>
                             <Trash2 size={16} />
                           </button>
                         </td>
@@ -477,7 +547,22 @@ const AdminPanel = ({
         {/* VIEW 4: ORDERS TAB */}
         {activeTab === 'Orders' && (
           <div className="glass glass-card" style={{ background: '#ffffff' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.25rem' }}>Customer Orders Log</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B' }}>Customer Orders Log</h3>
+              <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                {['All', 'PENDING_PAYMENT', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'].map(f => (
+                  <button 
+                    key={f}
+                    onClick={() => setOrderFilter(f)}
+                    className={`btn ${orderFilter === f ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '8px', whiteSpace: 'nowrap' }}
+                  >
+                    {f.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
@@ -491,59 +576,106 @@ const AdminPanel = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {salesHistory.slice().reverse().map((order, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F8D7D0', verticalAlign: 'top' }}>
-                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{order.orderId || `ORD-${idx+1001}`}</td>
-                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.timestamp || 'Today'}</td>
+                  {salesHistory
+                    .filter(order => orderFilter === 'All' || order.order_status === orderFilter || order.payment_status === orderFilter)
+                    .slice().reverse().map((order, idx) => (
+                    <tr 
+                      key={order.id || idx} 
+                      onClick={() => setSelectedOrder(order)}
+                      style={{ borderBottom: '1px solid #F8D7D0', verticalAlign: 'top', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fdf2f8'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{order.order_number || order.orderId || `ORD-${idx+1001}`}</td>
+                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : (order.timestamp || 'Today')}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <div style={{ fontWeight: 600 }}>{order.customer?.name || order.customerName || 'Boutique Guest'}</div>
-                        {order.customer && (
-                          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', lineHeight: '1.4' }}>
-                            {order.customer.address1}<br/>
-                            {order.customer.city} - {order.customer.pincode}<br/>
-                            {order.customer.mobile}
-                          </div>
-                        )}
+                        <div style={{ fontWeight: 600 }}>{order.customer_name || order.customer?.name || 'Boutique Guest'}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', lineHeight: '1.4' }}>
+                          {order.shipping_address || (order.customer && order.customer.address1)}<br/>
+                          {order.city || (order.customer && order.customer.city)} - {order.pincode || (order.customer && order.customer.pincode)}<br/>
+                          {order.customer_phone || (order.customer && order.customer.mobile)}
+                        </div>
                       </td>
                       <td style={{ padding: '0.85rem' }}>
-                        <div style={{ fontWeight: 600, color: '#047857' }}>{order.paymentStatus || 'Paid'} via {order.paymentMethod || 'UPI'}</div>
-                        {order.transactionId && (
+                        <div style={{ fontWeight: 600, color: '#047857' }}>{order.payment_status || order.paymentStatus || 'Paid'} via {order.payment_method || order.paymentMethod || 'UPI'}</div>
+                        {(order.transaction_id || order.transactionId) && (
                           <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', fontFamily: 'monospace' }}>
-                            Txn: {order.transactionId}
+                            Txn: {order.transaction_id || order.transactionId}
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B' }}>₹{order.total?.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B' }}>₹{(order.final_total || order.total)?.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <select 
-                          value={order.orderStatus || 'Pending'}
-                          onChange={async (e) => {
-                            const newStatus = e.target.value;
-                            setSalesHistory(prev => prev.map(o => o.orderId === order.orderId ? { ...o, orderStatus: newStatus } : o));
-                            await axios.post('/api/admin/action', { action: 'updateOrderStatus', payload: { orderId: order.orderId, status: newStatus } });
-                            showToast(`Order ${order.orderId} marked as ${newStatus}`, 'success');
-                          }}
-                          style={{
-                            padding: '0.4rem',
-                            borderRadius: '6px',
-                            border: '1px solid #e5e7eb',
-                            fontSize: '0.85rem',
-                            backgroundColor: '#fdf2f8',
-                            color: '#A63A4B',
-                            fontWeight: 600,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="Packed">Packed</option>
-                          <option value="Shipped">Shipped</option>
-                          <option value="Delivered">Delivered</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
+                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.order_status) ? 'badge-warning' : 'badge-pink'}`}>
+                          {order.order_status || order.orderStatus || 'Pending'}
+                        </span>
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 8: CATEGORIES TAB */}
+        {activeTab === 'Categories' && (
+          <div className="glass glass-card" style={{ background: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', flex: 1, maxWidth: '480px' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94757A' }} />
+                  <input
+                    type="text"
+                    placeholder="Search categories..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ paddingLeft: '34px', fontSize: '0.88rem' }}
+                  />
+                </div>
+              </div>
+
+              <button onClick={() => handleSaveCategoryClick()} className="btn btn-primary">
+                <Plus size={18} /> Add Category
+              </button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
+                    <th style={{ padding: '0.85rem' }}>Category Name</th>
+                    <th style={{ padding: '0.85rem' }}>Slug</th>
+                    <th style={{ padding: '0.85rem' }}>Status</th>
+                    <th style={{ padding: '0.85rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categories
+                    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map((c) => (
+                      <tr key={c.id} style={{ borderBottom: '1px solid #F8D7D0' }}>
+                        <td style={{ padding: '0.85rem', fontWeight: 700, color: '#2C181B' }}>{c.name}</td>
+                        <td style={{ padding: '0.85rem', fontFamily: 'monospace', color: '#5C4347' }}>{c.slug}</td>
+                        <td style={{ padding: '0.85rem' }}>
+                          <button 
+                            onClick={() => handleToggleCategoryActive(c.id, c.is_active)}
+                            className={`badge ${c.is_active ? 'badge-success' : 'badge-warning'}`}
+                            style={{ cursor: 'pointer', border: 'none', background: c.is_active ? '#dcfce7' : '#fee2e2', color: c.is_active ? '#166534' : '#991b1b' }}
+                          >
+                            {c.is_active ? 'Active' : 'Disabled'}
+                          </button>
+                        </td>
+                        <td style={{ padding: '0.85rem', textAlign: 'right' }}>
+                          <button onClick={() => handleSaveCategoryClick(c)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', marginRight: '0.4rem' }}>
+                            <Edit size={16} />
+                          </button>
+                          <button onClick={() => handleDeleteCategory(c)} className="btn btn-ghost" style={{ padding: '0.35rem 0.65rem', color: '#ef4444' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -792,106 +924,50 @@ const AdminPanel = ({
         )}
       </div>
 
-      {/* Product Modal */}
-      {isProductModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass glass-card" style={{ background: '#fff', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#2C181B' }}>{editingProduct?.id?.startsWith('PROD-') && !editingProduct.name ? 'Add New Product' : 'Edit Product'}</h2>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const payload = {
-                ...editingProduct,
-                price: Number(editingProduct.price),
-                originalPrice: Number(editingProduct.originalPrice) || 0,
-                stock: Number(editingProduct.stock),
-                features: typeof editingProduct.features === 'string' 
-                  ? editingProduct.features.split(',').map(f => f.trim()).filter(Boolean) 
-                  : editingProduct.features
-              };
-              
-              const isEdit = products.some(p => p.id === payload.id);
-              if (isEdit) {
-                setProducts(prev => prev.map(p => p.id === payload.id ? payload : p));
-              } else {
-                setProducts(prev => [...prev, payload]);
-              }
-              
-              try {
-                await axios.post('/api/admin/action', { action: 'saveProduct', payload });
-                showToast('Product saved successfully!', 'success');
-              } catch (err) {
-                showToast('Failed to save product on server', 'error');
-              }
-              setIsProductModalOpen(false);
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Product Name</label>
-                  <input required type="text" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
-                </div>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Category</label>
-                  <input required type="text" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.category} onChange={e => setEditingProduct({...editingProduct, category: e.target.value})} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Price (₹)</label>
-                  <input required type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: e.target.value})} />
-                </div>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Orig Price (₹)</label>
-                  <input type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.originalPrice} onChange={e => setEditingProduct({...editingProduct, originalPrice: e.target.value})} />
-                </div>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Stock</label>
-                  <input required type="number" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.stock} onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Main Image (Upload or URL)</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], 'image')} style={{ display: 'none' }} id="upload-image" />
-                    <label htmlFor="upload-image" className="btn btn-ghost" style={{ padding: '0.75rem', cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem' }}>Upload File</label>
-                    <input required type="text" style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.image} onChange={e => setEditingProduct({...editingProduct, image: e.target.value})} placeholder="https://..." />
-                  </div>
-                </div>
-                <div>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Hover Image (Upload or URL)</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files[0], 'hoverImage')} style={{ display: 'none' }} id="upload-hover-image" />
-                    <label htmlFor="upload-hover-image" className="btn btn-ghost" style={{ padding: '0.75rem', cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '0.85rem' }}>Upload File</label>
-                    <input required type="text" style={{ flex: 1, padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.hoverImage} onChange={e => setEditingProduct({...editingProduct, hoverImage: e.target.value})} placeholder="https://..." />
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Description</label>
-                <textarea required rows={3} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
-              </div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 600, color: '#5C4347' }}>Features (Comma separated)</label>
-                <input required type="text" style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} value={editingProduct.features} onChange={e => setEditingProduct({...editingProduct, features: e.target.value})} placeholder="Handmade, Premium Quality, Fast Delivery" />
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
-                  <input type="checkbox" checked={editingProduct.isNew} onChange={e => setEditingProduct({...editingProduct, isNew: e.target.checked})} />
-                  Mark as New
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
-                  <input type="checkbox" checked={editingProduct.bestseller} onChange={e => setEditingProduct({...editingProduct, bestseller: e.target.checked})} />
-                  Mark as Bestseller
-                </label>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button type="button" onClick={() => setIsProductModalOpen(false)} className="btn btn-ghost" style={{ padding: '0.75rem 1.5rem', color: '#5C4347' }}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Save Product</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductModal 
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        productToEdit={editingProduct}
+        categories={categories}
+        onAddNewCategory={() => setIsCategoryModalOpen(true)}
+        onSave={(savedProduct) => {
+          if (editingProduct) {
+            setProducts(prev => prev.map(p => p.id === savedProduct.id ? savedProduct : p));
+          } else {
+            setProducts(prev => [savedProduct, ...prev]);
+          }
+          setIsProductModalOpen(false);
+          fetchAdminData();
+        }}
+        showToast={showToast}
+      />
+      
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        categoryToEdit={editingCategory}
+        onSave={(savedCategory) => {
+          if (editingCategory) {
+            setCategories(prev => prev.map(c => c.id === savedCategory.id ? savedCategory : c));
+          } else {
+            setCategories(prev => [...prev, savedCategory]);
+          }
+          setIsCategoryModalOpen(false);
+          fetchAdminData();
+        }}
+        showToast={showToast}
+      />
+
+      <OrderDetailsModal 
+        isOpen={!!selectedOrder}
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        showToast={showToast}
+        onStatusChange={(orderId, newStatus) => {
+          setSalesHistory(prev => prev.map(o => o.id === orderId ? { ...o, order_status: newStatus } : o));
+          setSelectedOrder(prev => ({ ...prev, order_status: newStatus }));
+        }}
+      />
     </div>
   );
 };

@@ -1,30 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import { supabase } from './lib/supabase';
 import axios from 'axios';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import MobileNav from './components/MobileNav';
-import HomePage from './components/HomePage';
-import ShopPage from './components/ShopPage';
-import ProductDetailPage from './components/ProductDetailPage';
-import CartView from './components/CartView';
-import CheckoutPage from './components/CheckoutPage';
-import OrderSuccessPage from './components/OrderSuccessPage';
-import MyOrdersPage from './components/MyOrdersPage';
-import WishlistView from './components/WishlistView';
-import AboutPage from './components/AboutPage';
-import ContactPage from './components/ContactPage';
-import PrivacyPolicyPage from './components/PrivacyPolicyPage';
-import RefundPolicyPage from './components/RefundPolicyPage';
-import ShippingPolicyPage from './components/ShippingPolicyPage';
-import TermsPolicyPage from './components/TermsPolicyPage';
-import AdminLoginModal from './components/AdminLoginModal';
-import AdminPanel from './components/AdminPanel';
-import ProductTable from './components/ProductTable';
-import ProductModal from './components/ProductModal';
-import DeleteModal from './components/DeleteModal';
 import Toast from './components/Toast';
-import { initialProducts } from './data/initialProducts';
-import { Plus, ShieldCheck, Lock } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
+
+// Lazy load route components for code-splitting
+const HomePage = lazy(() => import('./components/HomePage'));
+const ShopPage = lazy(() => import('./components/ShopPage'));
+const ProductDetailPage = lazy(() => import('./components/ProductDetailPage'));
+const CartView = lazy(() => import('./components/CartView'));
+const CheckoutPage = lazy(() => import('./components/CheckoutPage'));
+const OrderSuccessPage = lazy(() => import('./components/OrderSuccessPage'));
+const MyOrdersPage = lazy(() => import('./components/MyOrdersPage'));
+const WishlistView = lazy(() => import('./components/WishlistView'));
+const AboutPage = lazy(() => import('./components/AboutPage'));
+const ContactPage = lazy(() => import('./components/ContactPage'));
+const PrivacyPolicyPage = lazy(() => import('./components/PrivacyPolicyPage'));
+const RefundPolicyPage = lazy(() => import('./components/RefundPolicyPage'));
+const ShippingPolicyPage = lazy(() => import('./components/ShippingPolicyPage'));
+const TermsPolicyPage = lazy(() => import('./components/TermsPolicyPage'));
+const AdminLoginModal = lazy(() => import('./components/AdminLoginModal'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
 
 function App() {
   const [activePage, setActivePage] = useState(() => {
@@ -33,6 +32,7 @@ function App() {
     return validPages.includes(path) ? path : 'home';
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   useEffect(() => {
     const path = activePage === 'home' ? '/' : `/${activePage}`;
@@ -51,25 +51,6 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
   
-  const [products, setProducts] = useState([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get('/api/products');
-        if (response.data.success) {
-          setProducts(response.data.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch products:", err);
-      } finally {
-        setIsLoadingProducts(false);
-      }
-    };
-    fetchProducts();
-  }, []);
-
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem('inzfyer-cart');
     if (saved) {
@@ -103,14 +84,40 @@ function App() {
 
   // Admin & Modals
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkUser = async (session) => {
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        if (!error && data?.role === 'admin') {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    };
+
+    // Initial check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      checkUser(session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      checkUser(session);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [selectedProductForDetail, setSelectedProductForDetail] = useState(null);
-
-  // Admin inventory CRUD modals
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -124,110 +131,81 @@ function App() {
   };
 
   // Cart operations
-  const handleAddToCart = (productToAdd) => {
+  const handleAddToCart = useCallback((productToAdd) => {
+    const existing = cart.find(item => item.id === productToAdd.id);
+    const qtyToAdd = productToAdd.qty || 1;
+    const newQty = existing ? existing.qty + qtyToAdd : qtyToAdd;
+
+    if (productToAdd.stock !== undefined && newQty > productToAdd.stock) {
+      showToast(`Cannot add more. Only ${productToAdd.stock} in stock.`, 'warning');
+      return;
+    }
+
     setCart(prev => {
-      const existing = prev.find(item => item.id === productToAdd.id);
-      const qtyToAdd = productToAdd.qty || 1;
-      if (existing) {
+      const innerExisting = prev.find(item => item.id === productToAdd.id);
+      if (innerExisting) {
         return prev.map(item => 
           item.id === productToAdd.id 
-            ? { ...item, qty: item.qty + qtyToAdd, giftNote: productToAdd.giftNote || item.giftNote }
+            ? { ...item, qty: innerExisting.qty + qtyToAdd, giftNote: productToAdd.giftNote || item.giftNote }
             : item
         );
       }
       return [...prev, { ...productToAdd, qty: qtyToAdd }];
     });
     showToast(`Added "${productToAdd.name}" to shopping cart!`, 'cart');
-  };
+  }, [cart]);
 
-  const handleBuyNow = (productToBuy) => {
+  const handleBuyNow = useCallback((productToBuy) => {
     handleAddToCart(productToBuy);
     setSelectedProductForDetail(null);
     setActivePage('checkout');
-  };
+  }, [handleAddToCart]);
 
-  const handleUpdateCartQty = (id, newQty) => {
+  const handleRemoveFromCart = useCallback((id) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+    showToast('Item removed from cart', 'info');
+  }, []);
+
+  const handleUpdateCartQty = useCallback((id, newQty, stock) => {
     if (newQty <= 0) {
       handleRemoveFromCart(id);
+    } else if (stock !== undefined && newQty > stock) {
+      showToast(`Maximum stock of ${stock} reached`, 'warning');
     } else {
       setCart(prev => prev.map(item => item.id === id ? { ...item, qty: newQty } : item));
     }
-  };
+  }, [handleRemoveFromCart]);
 
-  const handleRemoveFromCart = (id) => {
-    setCart(prev => prev.filter(item => item.id !== id));
-    showToast('Item removed from cart', 'info');
-  };
-
-  const handleClearCart = () => {
+  const handleClearCart = useCallback(() => {
     setCart([]);
     showToast('Shopping cart cleared', 'info');
-  };
+  }, []);
 
   // Wishlist operations
-  const handleToggleWishlist = (product) => {
-    const exists = wishlist.some(item => item.id === product.id);
-    if (exists) {
-      setWishlist(prev => prev.filter(item => item.id !== product.id));
-      showToast(`Removed "${product.name}" from wishlist`, 'info');
-    } else {
-      setWishlist(prev => [...prev, product]);
-      showToast(`Saved "${product.name}" to wishlist!`, 'wishlist');
-    }
-  };
+  const handleToggleWishlist = useCallback((product) => {
+    setWishlist(prev => {
+      const exists = prev.some(item => item.id === product.id);
+      if (exists) {
+        showToast(`Removed "${product.name}" from wishlist`, 'info');
+        return prev.filter(item => item.id !== product.id);
+      } else {
+        showToast(`Saved "${product.name}" to wishlist!`, 'wishlist');
+        return [...prev, product];
+      }
+    });
+  }, []);
 
-  const handleRemoveFromWishlist = (id) => {
+  const handleRemoveFromWishlist = useCallback((id) => {
     setWishlist(prev => prev.filter(item => item.id !== id));
     showToast('Removed from wishlist', 'info');
-  };
+  }, []);
 
   // Checkout completion
   const handleCompleteCheckout = (orderData) => {
     setMyOrders(prev => [...prev, orderData]);
     setRecentOrder(orderData);
-    
-    // Refresh products to get updated stock
-    axios.get('/api/products').then(res => {
-      if(res.data.success) {
-        setProducts(res.data.data);
-      }
-    });
-
     setCart([]);
     setAppliedPromo(null);
-  };
-
-  // Admin Inventory CRUD
-  const handleSaveProduct = async (productData) => {
-    try {
-      await axios.post('/api/admin/action', { action: 'saveProduct', payload: productData });
-      
-      if (productToEdit) {
-        setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
-        showToast(`Updated "${productData.name}"`, 'success');
-      } else {
-        setProducts(prev => [productData, ...prev]);
-        showToast(`Added "${productData.name}" to boutique catalog!`, 'success');
-      }
-    } catch (err) {
-      showToast('Failed to save product. Admin session may have expired.', 'error');
-    }
-    
-    setIsProductModalOpen(false);
-    setProductToEdit(null);
-  };
-
-  const handleDeleteConfirm = async (id) => {
-    try {
-      await axios.post('/api/admin/action', { action: 'deleteProduct', payload: { id } });
-      setProducts(prev => prev.filter(p => p.id !== id));
-      showToast('Product deleted from inventory', 'info');
-    } catch (err) {
-      showToast('Failed to delete product.', 'error');
-    }
-    
-    setIsDeleteModalOpen(false);
-    setProductToDelete(null);
   };
 
   return (
@@ -246,7 +224,7 @@ function App() {
         isAdmin={isAdmin}
         setIsAdminModalOpen={setIsAdminModalOpen}
         onLogoutAdmin={async () => {
-          await axios.post('/api/admin/logout');
+          await supabase.auth.signOut();
           setIsAdmin(false);
           setActivePage('home');
           showToast('Logged out of Admin Portal', 'info');
@@ -255,25 +233,24 @@ function App() {
 
       {/* Main Content Area */}
       <main style={{ flexGrow: 1, maxWidth: '1300px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem' }} className="app-content">
-        {selectedProductForDetail ? (
-          <ProductDetailPage 
-            product={selectedProductForDetail}
-            products={products}
-            onClose={() => setSelectedProductForDetail(null)}
-            onAddToCart={handleAddToCart}
-            onBuyNow={handleBuyNow}
-            onToggleWishlist={handleToggleWishlist}
-            wishlist={wishlist}
-            onSelectProduct={(p) => {
-              setSelectedProductForDetail(p);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        ) : (
-          <>
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Loader2 className="spin" size={32} color="#db2777" /></div>}>
+          {selectedProductForDetail ? (
+            <ProductDetailPage 
+              product={selectedProductForDetail}
+              onClose={() => setSelectedProductForDetail(null)}
+              onAddToCart={handleAddToCart}
+              onBuyNow={handleBuyNow}
+              onToggleWishlist={handleToggleWishlist}
+              wishlist={wishlist}
+              onSelectProduct={(p) => {
+                setSelectedProductForDetail(p);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          ) : (
+            <>
             {activePage === 'home' && (
               <HomePage 
-                products={products}
                 setActivePage={setActivePage}
                 onAddToCart={handleAddToCart}
                 onToggleWishlist={handleToggleWishlist}
@@ -282,12 +259,12 @@ function App() {
                   setSelectedProductForDetail(p);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
+                setSelectedCategory={setSelectedCategory}
               />
             )}
 
             {activePage === 'shop' && (
               <ShopPage 
-                products={products}
                 onAddToCart={handleAddToCart}
                 onToggleWishlist={handleToggleWishlist}
                 wishlist={wishlist}
@@ -297,6 +274,8 @@ function App() {
                 }}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
               />
             )}
 
@@ -378,9 +357,8 @@ function App() {
             {activePage === 'admin' && (
               isAdmin ? (
                 <AdminPanel 
-                  products={products}
                   onLogout={async () => {
-                    await axios.post('/api/admin/logout');
+                    await supabase.auth.signOut();
                     setIsAdmin(false);
                     setActivePage('home');
                     showToast('Logged out of Admin Portal', 'info');
@@ -404,6 +382,7 @@ function App() {
             )}
           </>
         )}
+        </Suspense>
       </main>
 
       {/* Footer */}
@@ -423,35 +402,17 @@ function App() {
 
       {/* Modals */}
 
-      <AdminLoginModal 
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
-        onLoginSuccess={() => {
-          setIsAdmin(true);
-          setActivePage('admin');
-          showToast('Welcome to INZFYER Admin Portal!', 'success');
-        }}
-      />
-
-      <ProductModal 
-        isOpen={isProductModalOpen}
-        onClose={() => {
-          setIsProductModalOpen(false);
-          setProductToEdit(null);
-        }}
-        onSave={handleSaveProduct}
-        productToEdit={productToEdit}
-      />
-
-      <DeleteModal 
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setProductToDelete(null);
-        }}
-        onConfirm={handleDeleteConfirm}
-        product={productToDelete}
-      />
+      <Suspense fallback={null}>
+        <AdminLoginModal 
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+          onLoginSuccess={() => {
+            setIsAdmin(true);
+            setActivePage('admin');
+            showToast('Welcome to INZFYER Admin Portal!', 'success');
+          }}
+        />
+      </Suspense>
 
       {/* Toast Notification */}
       <Toast toast={toast} onClose={() => setToast(null)} />

@@ -3,9 +3,9 @@ import { Gift, Heart, ShieldCheck, Sparkles, Star, Users } from 'lucide-react';
 
 const AboutPage = ({ setActivePage }) => {
   const stats = [
-    { number: '15,000+', label: 'Delighted Customers', icon: Users },
+    { number: '1,000+', label: 'Delighted Customers', icon: Users },
     { number: '100%', label: 'Hypoallergenic Organic Cotton', icon: ShieldCheck },
-    { number: '500+', label: 'Handcrafted Gift Collections', icon: Gift },
+    { number: '50+', label: 'Handcrafted Gift Collections', icon: Gift },
     { number: '4.9 / 5', label: 'Average Boutique Rating', icon: Star },
   ];
 
@@ -64,6 +64,7 @@ const AboutPage = ({ setActivePage }) => {
             <img
               src="https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80"
               alt="INZFYER Gift Box"
+              loading="lazy"
               style={{ width: '100%', height: '360px', objectFit: 'cover', borderRadius: '24px' }}
             />
             <div style={{

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Package, Download, ChevronRight, CheckCircle2, Clock, Truck, XCircle } from 'lucide-react';
+import ResponsiveImage from './ResponsiveImage';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -134,7 +135,7 @@ const MyOrdersPage = ({ myOrders, setActivePage, salesHistory }) => {
                 {/* Images Preview */}
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {order.items.slice(0, 3).map((item, i) => (
-                    <img key={i} src={item.image} alt={item.name} title={item.name} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '10px', background: '#fdf2f8', border: '1px solid #fce7f3' }} />
+                    <ResponsiveImage key={i} src={item.image} alt={item.name} title={item.name} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '10px', background: '#fdf2f8', border: '1px solid #fce7f3' }} />
                   ))}
                   {order.items.length > 3 && (
                     <div style={{ width: '64px', height: '64px', borderRadius: '10px', background: '#fdf2f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#db2777', fontWeight: 700, fontSize: '0.9rem', border: '1px solid #fce7f3' }}>

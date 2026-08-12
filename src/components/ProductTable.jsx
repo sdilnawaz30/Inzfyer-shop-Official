@@ -34,9 +34,10 @@ const ProductTable = ({ products, onEdit, onDelete }) => {
                 <tr key={product.id} style={{ borderBottom: '1px solid #F8D7D0' }}>
                   <td style={{ padding: '0.85rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <img 
-                        src={product.image || 'https://images.unsplash.com/photo-1558060370-d644479be6f7?auto=format&fit=crop&w=100&q=80'} 
+                      <img
+                        src={product.image || 'https://images.unsplash.com/photo-1558060370-d644479be6f7?auto=format&fit=crop&w=100&q=80'}
                         alt={product.name}
+                        loading="lazy"
                         style={{ width: '46px', height: '46px', objectFit: 'cover', borderRadius: '12px', background: '#F8D7D0' }}
                       />
                       <div>
@@ -69,15 +70,15 @@ const ProductTable = ({ products, onEdit, onDelete }) => {
                   </td>
                   <td style={{ padding: '0.85rem', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
-                      <button 
-                        className="btn btn-ghost btn-icon" 
+                      <button
+                        className="btn btn-ghost btn-icon"
                         onClick={() => onEdit(product)}
                         title="Edit Product"
                       >
                         <Edit2 size={16} color="#8C2E3C" />
                       </button>
-                      <button 
-                        className="btn btn-ghost btn-icon" 
+                      <button
+                        className="btn btn-ghost btn-icon"
                         onClick={() => onDelete(product)}
                         title="Delete Product"
                         style={{ color: '#ef4444' }}
