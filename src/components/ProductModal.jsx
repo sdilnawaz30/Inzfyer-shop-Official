@@ -147,7 +147,6 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
     try {
       // 1. Validation
       const price = parseFloat(formData.price);
-      const price = parseFloat(formData.price);
       const sale_price = formData.sale_price ? parseFloat(formData.sale_price) : null;
       const stock = parseInt(formData.stock, 10) || 0;
 
