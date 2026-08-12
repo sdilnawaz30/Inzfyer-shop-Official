@@ -3,7 +3,7 @@ import { X, Upload, Image as ImageIcon, Sparkles, AlertCircle, Trash2, ArrowUp, 
 import { supabase } from '../lib/supabase';
 import { processImageForUpload } from '../utils/imageProcessing';
 
-const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [], onAddNewCategory }) => {
+const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [], onAddNewCategory, showToast }) => {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
