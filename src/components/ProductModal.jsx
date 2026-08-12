@@ -11,6 +11,7 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
     price: '',
     sale_price: '',
     stock: '10',
+    gst_rate: '18.00',
     description: '',
     is_active: true,
     featured: false,
@@ -31,6 +32,7 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
         category_id: productToEdit.category_id || (categories.length > 0 ? categories[0].id : ''),
         price: productToEdit.price || '',
         sale_price: productToEdit.sale_price || '',
+        gst_rate: productToEdit.gst_rate || '18.00',
         stock: productToEdit.stock?.toString() || '0',
         description: productToEdit.description || '',
         is_active: productToEdit.is_active ?? true,
@@ -56,6 +58,7 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
         category_id: categories.length > 0 ? categories[0].id : '',
         price: '',
         sale_price: '',
+        gst_rate: '18.00',
         stock: '10',
         description: '',
         is_active: true,
@@ -245,7 +248,8 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
           category_id: formData.category_id || null,
           price,
           sale_price,
-          stock,
+          gst_rate: parseFloat(formData.gst_rate) || 18.00,
+          stock: parseInt(formData.stock),
           is_active: formData.is_active,
           featured: formData.featured,
           new_arrival: formData.new_arrival
@@ -476,7 +480,7 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
               <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Selling Price (₹) *</label>
               <input required name="price" type="number" step="0.01" min="0" placeholder="1899" value={formData.price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
@@ -484,6 +488,10 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
             <div>
               <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Discount Price (₹)</label>
               <input name="sale_price" type="number" step="0.01" min="0" placeholder="Optional" value={formData.sale_price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+            </div>
+            <div>
+              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>GST Rate (%) *</label>
+              <input required name="gst_rate" type="number" step="0.01" min="0" max="100" placeholder="18.00" value={formData.gst_rate} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
             </div>
           </div>
 

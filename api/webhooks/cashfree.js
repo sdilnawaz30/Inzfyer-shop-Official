@@ -34,7 +34,7 @@ export default async function handler(req, res) {
       const payment = data.payment;
 
       const db = getDb();
-      
+
       // Update order status in database
       await db.update(schema.orders)
         .set({
@@ -51,9 +51,9 @@ export default async function handler(req, res) {
           // Note: a real app would use a transaction or raw SQL decrement
           const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.id));
           if (product) {
-             await db.update(schema.products)
-               .set({ stock: Math.max(0, product.stock - item.qty) })
-               .where(eq(schema.products.id, item.id));
+            await db.update(schema.products)
+              .set({ stock: Math.max(0, product.stock - item.qty) })
+              .where(eq(schema.products.id, item.id));
           }
         }
       }

@@ -84,7 +84,15 @@ const PosView = ({ products, onCompleteSale }) => {
   calculatedDiscount = Math.min(subtotal, calculatedDiscount);
 
   const discountedSubtotal = Math.max(0, subtotal - calculatedDiscount);
-  const tax = discountedSubtotal * 0.05; // 5% GST
+  
+  const discountRatio = subtotal > 0 ? calculatedDiscount / subtotal : 0;
+  const tax = cart.reduce((sum, item) => {
+    const itemTotal = item.price * item.qty;
+    const discountedItemTotal = itemTotal * (1 - discountRatio);
+    const gstRate = item.gst_rate != null ? Number(item.gst_rate) : 18;
+    return sum + (discountedItemTotal * (gstRate / 100));
+  }, 0);
+
   const total = discountedSubtotal + tax;
 
   // Print Bill / Download Receipt PDF
@@ -137,7 +145,7 @@ const PosView = ({ products, onCompleteSale }) => {
       doc.text(`- ₹${saleData.discount.toLocaleString('en-IN')}`, 180, finalY + 6);
     }
 
-    doc.text(`GST Tax (5%):`, 140, finalY + 12);
+    doc.text(`GST Tax:`, 140, finalY + 12);
     doc.text(`₹${Math.round(saleData.tax).toLocaleString('en-IN')}`, 180, finalY + 12);
 
     doc.setFontSize(12);
@@ -362,7 +370,7 @@ const PosView = ({ products, onCompleteSale }) => {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#5C4347', marginBottom: '0.75rem' }}>
-                <span>GST Tax (5%)</span>
+                <span>GST Tax</span>
                 <span>₹{Math.round(tax).toLocaleString('en-IN')}</span>
               </div>
 

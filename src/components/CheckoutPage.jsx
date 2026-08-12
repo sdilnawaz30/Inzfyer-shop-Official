@@ -33,7 +33,16 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
   const discount = appliedPromo ? subtotal * 0.1 : 0;
   const freeShipping = subtotal >= 1999;
   const shippingFee = freeShipping ? 0 : 149;
-  const tax = (subtotal - discount) * 0.05;
+  
+  // Calculate tax per item after applying proportional discount
+  const discountRatio = subtotal > 0 ? discount / subtotal : 0;
+  const tax = cart.reduce((sum, item) => {
+    const itemTotal = item.price * item.qty;
+    const discountedItemTotal = itemTotal * (1 - discountRatio);
+    const gstRate = item.gst_rate != null ? Number(item.gst_rate) : 18;
+    return sum + (discountedItemTotal * (gstRate / 100));
+  }, 0);
+
   const total = subtotal - discount + tax + shippingFee;
 
   const handleShippingSubmit = (e) => {
@@ -244,7 +253,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6b7280' }}>
-              <span>Tax (5%)</span>
+              <span>Tax (GST)</span>
               <span style={{ fontWeight: 600, color: '#1f2937' }}>₹{tax.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
           </div>

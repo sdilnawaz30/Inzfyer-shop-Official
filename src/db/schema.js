@@ -27,6 +27,7 @@ export const products = pgTable('products', {
   categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   salePrice: numeric('sale_price', { precision: 10, scale: 2 }),
+  gstRate: numeric('gst_rate', { precision: 5, scale: 2 }).default('18.00'),
   stock: integer('stock').default(0).notNull(),
   rating: numeric('rating', { precision: 3, scale: 2 }).default('0.00'),
   featured: boolean('featured').default(false),
@@ -66,6 +67,7 @@ export const orders = pgTable('orders', {
   subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull().default('0'),
   shippingCharge: numeric('shipping_charge', { precision: 10, scale: 2 }).notNull().default('0'),
   discount: numeric('discount', { precision: 10, scale: 2 }).notNull().default('0'),
+  taxAmount: numeric('tax_amount', { precision: 10, scale: 2 }).notNull().default('0'),
   totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
   paymentStatus: text('payment_status').default('PENDING'),
   orderStatus: text('order_status').default('PENDING_PAYMENT'),
@@ -90,6 +92,8 @@ export const orderItems = pgTable('order_items', {
   quantity: integer('quantity').notNull(),
   unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
   subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 10, scale: 2 }).default('0'),
+  gstRate: numeric('gst_rate', { precision: 5, scale: 2 }).default('18.00'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
