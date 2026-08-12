@@ -216,16 +216,25 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
                   <span>Subtotal</span>
                   <span>₹{Number(order.subtotal).toLocaleString('en-IN')}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#4b5563' }}>
-                  <span>Shipping</span>
-                  <span>₹{Number(order.shipping_charge).toLocaleString('en-IN')}</span>
-                </div>
+                {order.payment_status === 'PAID' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                    <span>Shipping</span>
+                    <span>₹{Number(order.shipping_charge).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 {Number(order.discount) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#059669' }}>
                     <span>Discount</span>
                     <span>-₹{Number(order.discount).toLocaleString('en-IN')}</span>
                   </div>
                 )}
+                {order.payment_status === 'PAID' && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                    <span>Tax (GST)</span>
+                    <span>₹{Number(order.tax_amount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed #fbcfe8', fontSize: '1.1rem', fontWeight: 700, color: '#9d174d' }}>
                   <span>Grand Total</span>
                   <span>₹{Number(order.final_total).toLocaleString('en-IN')}</span>

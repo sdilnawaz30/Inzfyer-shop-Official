@@ -24,11 +24,13 @@ export const generateAndDownloadInvoice = (invoiceData) => {
   doc.text('Email: support@inzfyer.in | Web: www.inzfyer.in', 14, 40);
   // doc.text('GSTIN: 07AABCU9603R1ZM', 14, 45); // Un-comment when GSTIN is configured
   
+  const isPaid = order.paymentStatus === 'PAID' || order.paymentStatus === 'SUCCESS';
+  
   // Right side: TAX INVOICE & Meta
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(17, 24, 39);
-  doc.text('TAX INVOICE', 196, 20, { align: 'right' });
+  doc.text(isPaid ? 'TAX INVOICE' : 'BILL OF SUPPLY', 196, 20, { align: 'right' });
   
   const invoiceNumber = `INV-${order.orderNumber.split('-')[1] || order.orderNumber}`;
   const dateFormatted = new Date(order.createdAt).toLocaleDateString('en-IN', {
@@ -115,21 +117,36 @@ export const generateAndDownloadInvoice = (invoiceData) => {
     const taxAmt = item.taxAmount ? Number(item.taxAmount) : (itemSubtotal * (gstRate / 100));
     const totalAmt = itemSubtotal + taxAmt;
     
-    return [
-      index + 1,
-      item.productName || item.name,
-      item.sku || `INZ-${(item.productId || item.id || '').substring(0,6).toUpperCase()}`,
-      qty,
-      `₹${unitPrice.toFixed(2)}`,
-      `${gstRate.toFixed(2)}%`,
-      `₹${taxAmt.toFixed(2)}`,
-      `₹${totalAmt.toFixed(2)}`
-    ];
+    if (isPaid) {
+      return [
+        index + 1,
+        item.productName || item.name,
+        item.sku || `INZ-${(item.productId || item.id || '').substring(0,6).toUpperCase()}`,
+        qty,
+        `₹${unitPrice.toFixed(2)}`,
+        `${gstRate.toFixed(2)}%`,
+        `₹${taxAmt.toFixed(2)}`,
+        `₹${totalAmt.toFixed(2)}`
+      ];
+    } else {
+      return [
+        index + 1,
+        item.productName || item.name,
+        item.sku || `INZ-${(item.productId || item.id || '').substring(0,6).toUpperCase()}`,
+        qty,
+        `₹${unitPrice.toFixed(2)}`,
+        `₹${totalAmt.toFixed(2)}`
+      ];
+    }
   });
   
+  const headCells = isPaid 
+    ? [['S.No', 'Product Description', 'SKU', 'Qty', 'Unit Price', 'Tax %', 'Tax Amount', 'Total Amount']]
+    : [['S.No', 'Product Description', 'SKU', 'Qty', 'Unit Price', 'Total Amount']];
+
   autoTable(doc, {
     startY: startY,
-    head: [['S.No', 'Product Description', 'SKU', 'Qty', 'Unit Price', 'Tax %', 'Tax Amount', 'Total Amount']],
+    head: headCells,
     body: tableData,
     headStyles: { 
       fillColor: [243, 244, 246], // Light Gray
@@ -147,7 +164,7 @@ export const generateAndDownloadInvoice = (invoiceData) => {
       fontSize: 9,
       cellPadding: 4
     },
-    columnStyles: {
+    columnStyles: isPaid ? {
       0: { cellWidth: 12, halign: 'center' },
       1: { cellWidth: 50 },
       2: { cellWidth: 25 },
@@ -156,6 +173,13 @@ export const generateAndDownloadInvoice = (invoiceData) => {
       5: { halign: 'center' },
       6: { halign: 'right' },
       7: { halign: 'right' }
+    } : {
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 80 },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 15, halign: 'center' },
+      4: { halign: 'right' },
+      5: { halign: 'right' }
     },
     alternateRowStyles: { fillColor: [252, 252, 252] },
   });
@@ -186,13 +210,15 @@ export const generateAndDownloadInvoice = (invoiceData) => {
     finalY += 7;
   }
   
-  doc.text('Shipping Charges:', summaryX1, finalY);
-  doc.text(`₹${Number(order.shippingCharge || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
-  finalY += 7;
-  
-  doc.text('Total Tax:', summaryX1, finalY);
-  doc.text(`₹${Number(order.taxAmount || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
-  finalY += 7;
+  if (isPaid) {
+    doc.text('Shipping Charges:', summaryX1, finalY);
+    doc.text(`₹${Number(order.shippingCharge || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
+    finalY += 7;
+    
+    doc.text('Total Tax:', summaryX1, finalY);
+    doc.text(`₹${Number(order.taxAmount || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
+    finalY += 7;
+  }
   
   // Grand Total Line
   doc.setDrawColor(229, 231, 235);

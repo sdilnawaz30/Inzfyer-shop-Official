@@ -1,8 +1,7 @@
 import React from 'react';
 import { Package, Download, ChevronRight, CheckCircle2, Clock, Truck, XCircle } from 'lucide-react';
 import ResponsiveImage from './ResponsiveImage';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generateAndDownloadInvoice } from '../utils/invoiceGenerator';
 
 const getStatusIcon = (status) => {
   switch (status?.toLowerCase()) {
@@ -31,63 +30,42 @@ const MyOrdersPage = ({ myOrders, setActivePage, salesHistory }) => {
   }).reverse(); // Show newest first
 
   const handleDownloadPDF = (orderData) => {
-    const doc = new jsPDF();
+    // Format for our standard invoice generator
+    const invoiceData = {
+      order: {
+        orderNumber: orderData.orderId,
+        createdAt: orderData.timestamp,
+        customerName: orderData.customer?.name,
+        customerEmail: orderData.customer?.email,
+        customerPhone: orderData.customer?.mobile,
+        shippingAddress: orderData.customer?.address1,
+        city: orderData.customer?.city,
+        state: orderData.customer?.state || '',
+        pincode: orderData.customer?.pincode,
+        subtotal: orderData.subtotal,
+        shippingCharge: orderData.shippingFee,
+        discount: orderData.discount,
+        taxAmount: orderData.tax,
+        finalTotal: orderData.total,
+        paymentMethod: orderData.paymentMethod || 'Online',
+        paymentStatus: orderData.paymentStatus || 'PENDING',
+      },
+      items: orderData.items.map(item => ({
+        productName: item.name,
+        quantity: item.qty,
+        unitPrice: item.price,
+        subtotal: item.price * item.qty,
+        gstRate: item.gstRate || 18,
+        taxAmount: (item.price * item.qty) * ((item.gstRate || 18) / 100)
+      }))
+    };
     
-    // Brand Header
-    doc.setFillColor(219, 39, 119); // #db2777
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('INZFYER - Luxury Toy & Gift Shop', 14, 20);
-
-    // Invoice Meta
-    doc.setTextColor(31, 41, 55);
-    doc.setFontSize(14);
-    doc.text(`INVOICE: ${orderData.orderId}`, 14, 45);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Date: ${orderData.timestamp}`, 14, 52);
-    doc.text(`Transaction ID: ${orderData.transactionId}`, 14, 58);
-
-    // Customer Info
-    doc.setFont('helvetica', 'bold');
-    doc.text('Billed To:', 14, 70);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${orderData.customer.name}`, 14, 77);
-    doc.text(`${orderData.customer.address1}, ${orderData.customer.city} - ${orderData.customer.pincode}`, 14, 83);
-    doc.text(`Email: ${orderData.customer.email} | Phone: ${orderData.customer.mobile}`, 14, 89);
-
-    // Items Table
-    const tableData = orderData.items.map(item => [
-      item.name,
-      item.category,
-      `INR ${item.price}`,
-      item.qty,
-      `INR ${item.price * item.qty}`
-    ]);
-
-    autoTable(doc, {
-      startY: 100,
-      head: [['Item Name', 'Category', 'Unit Price', 'Qty', 'Total']],
-      body: tableData,
-      headStyles: { fillStyle: 'F', fillColor: [219, 39, 119], textColor: [255, 255, 255] }
-    });
-
-    // Summary calculation
-    const finalY = doc.lastAutoTable.finalY + 15;
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Subtotal: INR ${orderData.subtotal.toFixed(2)}`, 140, finalY);
-    if (orderData.discount > 0) {
-      doc.text(`Discount: -INR ${orderData.discount.toFixed(2)}`, 140, finalY + 6);
+    try {
+      generateAndDownloadInvoice(invoiceData);
+    } catch (e) {
+      console.error("Failed to generate invoice", e);
+      alert("Failed to download invoice.");
     }
-    doc.text(`Shipping: INR ${orderData.shippingFee.toFixed(2)}`, 140, finalY + 12);
-    doc.text(`Tax (5%): INR ${orderData.tax.toFixed(2)}`, 140, finalY + 18);
-    doc.setFontSize(12);
-    doc.setTextColor(219, 39, 119);
-    doc.text(`Grand Total: INR ${orderData.total.toFixed(2)}`, 140, finalY + 28);
-
-    doc.save(`INZFYER_Invoice_${orderData.orderId}.pdf`);
   };
 
   return (

@@ -223,17 +223,7 @@ const CartView = ({
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6b7280' }}>
-                <span>Express Gift Shipping</span>
-                <span style={{ fontWeight: 600, color: freeShipping ? '#047857' : '#1f2937' }}>
-                  {freeShipping ? 'FREE' : '₹149'}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6b7280' }}>
-                <span>Estimated Tax (GST)</span>
-                <span style={{ fontWeight: 600, color: '#1f2937' }}>₹{tax.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-              </div>
+              {/* Shipping and Tax hidden before checkout/payment per exact customer request */}
             </div>
 
             {/* Total */}
