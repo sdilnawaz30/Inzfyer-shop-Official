@@ -141,7 +141,7 @@ const OrderSuccessPage = ({ setActivePage }) => {
                   <span style={{ fontWeight: 600, color: '#374151' }}>{item.productName}</span>
                   <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>x{item.quantity}</span>
                 </div>
-                <strong style={{ color: '#1f2937' }}>₹{Number(item.subtotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+                <strong style={{ color: '#1f2937' }}>₹{Number(item.subtotal ?? ((Number(item.unitPrice ?? item.price ?? 0)) * Number(item.quantity || 1))).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
               </div>
             ))}
           </div>

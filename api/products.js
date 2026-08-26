@@ -11,7 +11,13 @@ export default async function handler(req, res) {
     const db = getDb();
 
     // 1. CONSOLIDATED: Categories Query (Rewritten from /api/categories)
-    if (req.query.resource === 'categories' || req.query.categories === 'true') {
+    const isCategories =
+      req.query?.resource === 'categories' ||
+      req.query?.categories === 'true' ||
+      req.url?.includes('categories') ||
+      req.headers?.['x-matched-path']?.includes('categories');
+
+    if (isCategories) {
       const categories = await db.select({
         id: schema.categories.id,
         name: schema.categories.name,
@@ -21,26 +27,26 @@ export default async function handler(req, res) {
       .from(schema.categories)
       .where(eq(schema.categories.isActive, true))
       .orderBy(asc(schema.categories.name));
-      
+
       // Set cache headers for categories (cache for 1 hour, stale-while-revalidate for 1 day)
       res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 
-      return res.status(200).json({ 
-        success: true, 
-        data: categories 
+      return res.status(200).json({
+        success: true,
+        data: categories
       });
     }
 
     // 2. Products Query (Search, Filter, Sort, Pagination)
-    const { 
-      slug, 
-      type, 
-      categoryId, 
-      searchQuery, 
-      priceLimit, 
-      inStockOnly, 
-      sortBy, 
-      page = 1, 
+    const {
+      slug,
+      type,
+      categoryId,
+      searchQuery,
+      priceLimit,
+      inStockOnly,
+      sortBy,
+      page = 1,
       limit = 12,
       excludeId
     } = req.query;
@@ -51,11 +57,11 @@ export default async function handler(req, res) {
     if (slug) {
       conditions.push(eq(schema.products.slug, String(slug)));
     }
-    
+
     if (categoryId && categoryId !== 'All') {
       conditions.push(eq(schema.products.categoryId, String(categoryId)));
     }
-    
+
     if (excludeId) {
       conditions.push(ne(schema.products.id, String(excludeId)));
     }
@@ -120,7 +126,7 @@ export default async function handler(req, res) {
     .from(schema.products)
     .where(and(...conditions))
     .orderBy(...orderByCondition);
-    
+
     // Only paginate if not fetching by a specific slug
     if (!slug) {
       productsQuery = productsQuery.limit(limitNum).offset(offset);
@@ -176,7 +182,7 @@ export default async function handler(req, res) {
     // Count query for pagination (only if doing a list fetch)
     let totalCount = data.length;
     if (!slug && !type) {
-        // Simplified count query 
+        // Simplified count query
         const countQuery = await db.select({ id: schema.products.id }).from(schema.products).where(and(...conditions));
         totalCount = countQuery.length;
     }
@@ -184,8 +190,8 @@ export default async function handler(req, res) {
     // Set cache headers for public catalog (cache for 60s, stale-while-revalidate for 5 mins)
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       data: data,
       count: totalCount
     });

@@ -220,7 +220,6 @@ export default async function handler(req, res) {
         productName: item.name,
         quantity: item.qty,
         unitPrice: item.unitPrice.toFixed(2),
-        subtotal: item.subtotal.toFixed(2),
         basePrice: item.basePrice.toFixed(2),
         taxAmount: item.taxAmount.toFixed(2),
         cgstAmount: item.cgstAmount.toFixed(2),

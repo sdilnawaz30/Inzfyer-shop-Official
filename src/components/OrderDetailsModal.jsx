@@ -83,10 +83,10 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
         paymentStatus: order.payment_status,
       },
       items: items.map(item => ({
-        productName: item.product_name,
+        productName: item.productName || item.product_name,
         quantity: item.quantity,
-        unitPrice: item.unit_price,
-        subtotal: item.subtotal
+        unitPrice: item.unitPrice ?? item.unit_price ?? item.price,
+        subtotal: item.subtotal ?? ((Number(item.unitPrice ?? item.unit_price ?? item.price ?? 0)) * Number(item.quantity || 1))
       }))
     };
     
@@ -201,16 +201,16 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
                   {items.map((item) => (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: 500, color: '#1f2937' }}>
-                        {item.product_name}
+                        {item.productName || item.product_name}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#4b5563' }}>
-                        ₹{Number(item.unit_price).toLocaleString('en-IN')}
+                        ₹{Number(item.unitPrice ?? item.unit_price ?? item.price ?? 0).toLocaleString('en-IN')}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'center', fontWeight: 600 }}>
                         {item.quantity}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 600, color: '#1f2937' }}>
-                        ₹{Number(item.subtotal).toLocaleString('en-IN')}
+                        ₹{Number(item.subtotal ?? ((Number(item.unitPrice ?? item.unit_price ?? item.price ?? 0)) * Number(item.quantity || 1))).toLocaleString('en-IN')}
                       </td>
                     </tr>
                   ))}

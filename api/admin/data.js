@@ -42,7 +42,13 @@ export default async function handler(req, res) {
     }
 
     // 3. CONSOLIDATED: Auth Check Only (Rewritten from /api/admin/check)
-    if (req.query.checkOnly === 'true' || req.query.check === 'true') {
+    const isCheckOnly =
+      req.query?.checkOnly === 'true' ||
+      req.query?.check === 'true' ||
+      req.url?.includes('check') ||
+      req.headers?.['x-matched-path']?.includes('check');
+
+    if (isCheckOnly) {
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
@@ -60,13 +66,13 @@ export default async function handler(req, res) {
     if (profile[0].role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Forbidden. Admin access required.' });
     }
-    
+
     // Fetch all necessary data for the admin dashboard
     const allProducts = await db.select().from(schema.products);
     const allCategories = await db.select().from(schema.categories);
     const allOrders = await db.select().from(schema.orders);
     const allImages = await db.select().from(schema.productImages);
-    
+
     // Attach images to products for the frontend to digest easily
     const productsWithImages = allProducts.map(p => ({
         ...p,
@@ -83,7 +89,7 @@ export default async function handler(req, res) {
       orders: allOrders,
       orderItems: allOrderItems
     });
-    
+
   } catch (error) {
     console.error('Error in /api/admin/data:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });

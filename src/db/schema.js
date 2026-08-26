@@ -90,18 +90,34 @@ export const orders = pgTable('orders', {
 
 export const orderItems = pgTable('order_items', {
   id: uuid('id').defaultRandom().primaryKey(),
-  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
-  productId: uuid('product_id').notNull().references(() => products.id, { onDelete: 'restrict' }),
+
+  orderId: uuid('order_id')
+    .notNull()
+    .references(() => orders.id, { onDelete: 'cascade' }),
+
+  productId: uuid('product_id')
+    .notNull()
+    .references(() => products.id, { onDelete: 'restrict' }),
+
   productName: text('product_name').notNull(),
+
   quantity: integer('quantity').notNull(),
-  unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
-  subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull(),
+
+  // Neon production column is `price`, NOT `unit_price`
+  unitPrice: numeric('price', { precision: 10, scale: 2 }).notNull(),
+
   basePrice: numeric('base_price', { precision: 10, scale: 2 }).default('0'),
+
   taxAmount: numeric('tax_amount', { precision: 10, scale: 2 }).default('0'),
+
   cgstAmount: numeric('cgst_amount', { precision: 10, scale: 2 }).default('0'),
+
   sgstAmount: numeric('sgst_amount', { precision: 10, scale: 2 }).default('0'),
+
   igstAmount: numeric('igst_amount', { precision: 10, scale: 2 }).default('0'),
+
   gstRate: numeric('gst_rate', { precision: 5, scale: 2 }).default('18.00'),
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
