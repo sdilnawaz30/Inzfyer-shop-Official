@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Mail, Sparkles, X, ShieldCheck } from 'lucide-react';
 import logoImg from '../assets/logo.png';
+import axios from 'axios';
 
 import { supabase } from '../lib/supabase';
 const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
@@ -24,14 +25,12 @@ const AdminLoginModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
       if (signInError) throw signInError;
 
-      // Verify admin role from profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
+      // Verify admin role from profiles table securely via backend
+      const res = await axios.get('/api/admin/check', {
+        headers: { Authorization: `Bearer ${data.session.access_token}` }
+      });
 
-      if (profileError || profile?.role !== 'admin') {
+      if (!res.data.success || !res.data.data.is_admin) {
         await supabase.auth.signOut();
         throw new Error('Unauthorized access. Admin privileges required.');
       }

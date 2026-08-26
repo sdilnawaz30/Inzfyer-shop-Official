@@ -29,7 +29,7 @@ const MyOrdersPage = ({ myOrders, setActivePage, salesHistory }) => {
     return updatedOrder || myOrder;
   }).reverse(); // Show newest first
 
-  const handleDownloadPDF = (orderData) => {
+  const handleDownloadPDF = async (orderData) => {
     // Format for our standard invoice generator
     const invoiceData = {
       order: {
@@ -61,7 +61,7 @@ const MyOrdersPage = ({ myOrders, setActivePage, salesHistory }) => {
     };
     
     try {
-      generateAndDownloadInvoice(invoiceData);
+      await generateAndDownloadInvoice(invoiceData);
     } catch (e) {
       console.error("Failed to generate invoice", e);
       alert("Failed to download invoice.");

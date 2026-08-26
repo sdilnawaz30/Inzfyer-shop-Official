@@ -63,6 +63,10 @@ CREATE TABLE orders (
     shipping_charge NUMERIC(10, 2) NOT NULL DEFAULT 0,
     discount NUMERIC(10, 2) NOT NULL DEFAULT 0,
     tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    cgst_amount NUMERIC(10, 2) DEFAULT 0,
+    sgst_amount NUMERIC(10, 2) DEFAULT 0,
+    igst_amount NUMERIC(10, 2) DEFAULT 0,
+    base_subtotal NUMERIC(10, 2) DEFAULT 0,
     total_amount NUMERIC(10, 2) NOT NULL,
     payment_status TEXT DEFAULT 'pending',
     order_status TEXT DEFAULT 'pending',
@@ -81,7 +85,11 @@ CREATE TABLE order_items (
     quantity INTEGER NOT NULL,
     unit_price NUMERIC(10, 2) NOT NULL,
     subtotal NUMERIC(10, 2) NOT NULL,
+    base_price NUMERIC(10, 2) DEFAULT 0,
     tax_amount NUMERIC(10, 2) DEFAULT 0,
+    cgst_amount NUMERIC(10, 2) DEFAULT 0,
+    sgst_amount NUMERIC(10, 2) DEFAULT 0,
+    igst_amount NUMERIC(10, 2) DEFAULT 0,
     gst_rate NUMERIC(5, 2) DEFAULT 18.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

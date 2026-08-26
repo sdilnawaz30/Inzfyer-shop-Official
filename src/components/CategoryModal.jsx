@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import axios from 'axios';
 
 const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
   const [formData, setFormData] = useState({
@@ -53,12 +54,17 @@ const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
         is_active: formData.is_active
       };
 
-      if (categoryToEdit?.id) {
-        const { error } = await supabase.from('categories').update(payload).eq('id', categoryToEdit.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('categories').insert(payload);
-        if (error) throw error;
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await axios.post('/api/admin/action', {
+        action: 'saveCategory',
+        payload: {
+          id: categoryToEdit?.id || null,
+          category: payload
+        }
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      if (!res.data.success) {
+         throw new Error(res.data.message || "Failed to save category via backend.");
       }
 
       onSave();

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Gift, Minus, Plus, ShoppingBag, Sparkles, Trash2, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Gift, Minus, Plus, ShoppingBag, Trash2, ArrowRight, Loader2, MapPin } from 'lucide-react';
 import ResponsiveImage from './ResponsiveImage';
+import { getShipping } from '../utils/shipping';
 
 const CartView = ({ 
   cart, 
@@ -14,23 +15,54 @@ const CartView = ({
   showToast
 }) => {
   const [promoInput, setPromoInput] = useState('');
+  const [shippingConfig, setShippingConfig] = useState(null);
+  const [shippingPincode, setShippingPincode] = useState('');
+  const [shippingRate, setShippingRate] = useState(null);
+  const [shippingStateName, setShippingStateName] = useState('');
+  const [isCheckingShipping, setIsCheckingShipping] = useState(false);
+  const [shippingError, setShippingError] = useState('');
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const discount = appliedPromo ? subtotal * 0.1 : 0;
-  const shippingThreshold = 1999;
-  const freeShipping = subtotal >= shippingThreshold;
-  const amountNeededForFreeShipping = Math.max(0, shippingThreshold - subtotal);
   
-  // Calculate tax per item after applying proportional discount
-  const discountRatio = subtotal > 0 ? discount / subtotal : 0;
-  const tax = cart.reduce((sum, item) => {
-    const itemTotal = item.price * item.qty;
-    const discountedItemTotal = itemTotal * (1 - discountRatio);
-    const gstRate = item.gst_rate != null ? Number(item.gst_rate) : 18;
-    return sum + (discountedItemTotal * (gstRate / 100));
-  }, 0);
+  // Safe fallbacks before config loads
+  const threshold = shippingConfig?.freeThreshold || 1000;
+  const freeShipping = subtotal >= threshold;
+  const amountNeededForFreeShipping = Math.max(0, threshold - subtotal);
+  
+  const total = subtotal - discount;
 
-  const total = subtotal - discount + tax;
+  useEffect(() => {
+    fetch('/api/shipping-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setShippingConfig(data.data);
+      })
+      .catch(err => console.error("Failed to load shipping config", err));
+  }, []);
+
+  const handleCheckShipping = async (e) => {
+    e.preventDefault();
+    if (shippingPincode.length !== 6) {
+      setShippingError('Enter a valid 6-digit pincode');
+      return;
+    }
+    
+    setShippingError('');
+    setIsCheckingShipping(true);
+    
+    const result = await getShipping({ pincode: shippingPincode, subtotal, config: shippingConfig });
+    
+    if (result.isValid) {
+      setShippingRate(result.rate);
+      setShippingStateName(result.state);
+    } else {
+      setShippingError(result.error || 'Invalid pincode');
+      setShippingRate(null);
+      setShippingStateName('');
+    }
+    setIsCheckingShipping(false);
+  };
 
   const handleApplyPromo = (e) => {
     e.preventDefault();
@@ -89,11 +121,11 @@ const CartView = ({
                 <span style={{ fontWeight: 700, color: freeShipping ? '#047857' : '#db2777' }}>
                   {freeShipping ? 'You unlocked Free Express Shipping & Gift Wrapping!' : `Add ₹${amountNeededForFreeShipping.toLocaleString('en-IN')} more for Free Shipping!`}
                 </span>
-                <span style={{ fontWeight: 700, color: '#6b7280' }}>₹{subtotal} / ₹{shippingThreshold}</span>
+                <span style={{ fontWeight: 700, color: '#6b7280' }}>₹{subtotal.toLocaleString('en-IN')} / ₹{threshold.toLocaleString('en-IN')}</span>
               </div>
               <div style={{ width: '100%', height: '8px', background: '#fce7f3', borderRadius: '10px', overflow: 'hidden' }}>
                 <div style={{
-                  width: `${Math.min(100, (subtotal / shippingThreshold) * 100)}%`,
+                  width: `${Math.min(100, (subtotal / threshold) * 100)}%`,
                   height: '100%',
                   background: 'linear-gradient(90deg, #f472b6 0%, #db2777 100%)',
                   transition: 'width 0.3s ease'
@@ -223,15 +255,47 @@ const CartView = ({
                 </div>
               )}
 
-              {/* Shipping and Tax hidden before checkout/payment per exact customer request */}
+              {/* Shipping Estimate Form */}
+              <form onSubmit={handleCheckShipping} style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '0.4rem' }}>
+                  ESTIMATE SHIPPING
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Enter Pincode"
+                    value={shippingPincode}
+                    maxLength={6}
+                    onChange={(e) => setShippingPincode(e.target.value.replace(/\D/g, ''))}
+                    style={{ fontSize: '0.85rem', padding: '0.65rem', flex: 1 }}
+                  />
+                  <button type="submit" disabled={isCheckingShipping} className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontSize: '0.85rem' }}>
+                    {isCheckingShipping ? <Loader2 size={16} className="spin" /> : 'Check'}
+                  </button>
+                </div>
+                {shippingError && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.4rem' }}>{shippingError}</p>}
+              </form>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#6b7280' }}>
+                <span>Shipping</span>
+                <span style={{ fontWeight: 600 }}>
+                  {shippingRate === null 
+                    ? 'Enter pincode' 
+                    : shippingRate === 0 
+                      ? <span style={{ color: '#047857' }}>FREE</span> 
+                      : `₹${shippingRate} (${shippingStateName === 'Tamil Nadu' ? 'TN' : 'Other'})`}
+                </span>
+              </div>
             </div>
 
-            {/* Total */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
               <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1f2937' }}>Total</span>
               <span style={{ fontSize: '1.8rem', fontWeight: 800, color: '#db2777' }}>
-                ₹{(total + (freeShipping ? 0 : 149)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                ₹{(total + (shippingRate || 0)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </span>
+            </div>
+            <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', marginBottom: '1.5rem', fontStyle: 'italic' }}>
+              Prices are inclusive of all taxes
             </div>
 
             <button 

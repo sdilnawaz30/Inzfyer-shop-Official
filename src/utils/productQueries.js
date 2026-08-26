@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import axios from 'axios';
 
 // Helper to map database row to frontend component expected format
 const mapProductData = (p) => {
@@ -20,14 +20,8 @@ const mapProductData = (p) => {
 
 export const fetchCategories = async () => {
   try {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
-    
-    if (error) throw error;
-    return data || [];
+    const res = await axios.get('/api/categories');
+    return res.data?.data || [];
   } catch (err) {
     console.error('Error fetching categories:', err);
     return [];
@@ -36,56 +30,32 @@ export const fetchCategories = async () => {
 
 export const fetchStorefrontProducts = async (filters, page = 1, limit = 12) => {
   try {
-    let query = supabase
-      .from('products')
-      .select('id, name, slug, price, sale_price, stock, rating, new_arrival, featured, created_at, category:categories(name), images:product_images(image_url, is_primary)', { count: 'exact' })
-      .eq('is_active', true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit)
+    });
 
     if (filters.categoryId && filters.categoryId !== 'All') {
-      query = query.eq('category_id', filters.categoryId);
+      params.append('categoryId', filters.categoryId);
     }
-    
     if (filters.searchQuery) {
-      // Search in name or description
-      query = query.or(`name.ilike.%${filters.searchQuery}%,description.ilike.%${filters.searchQuery}%`);
+      params.append('searchQuery', filters.searchQuery);
     }
-
     if (filters.priceLimit) {
-      query = query.lte('price', filters.priceLimit);
+      params.append('priceLimit', filters.priceLimit);
     }
-
     if (filters.inStockOnly) {
-      query = query.gt('stock', 0);
+      params.append('inStockOnly', 'true');
+    }
+    if (filters.sortBy) {
+      params.append('sortBy', filters.sortBy);
     }
 
-    // Sorting
-    switch (filters.sortBy) {
-      case 'price-low':
-        query = query.order('price', { ascending: true });
-        break;
-      case 'price-high':
-        query = query.order('price', { ascending: false });
-        break;
-      case 'rating':
-        query = query.order('rating', { ascending: false });
-        break;
-      case 'popular':
-      default:
-        // Assuming popular means more stock or featured for now
-        query = query.order('featured', { ascending: false }).order('created_at', { ascending: false });
-        break;
-    }
-
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    const { data, error, count } = await query;
-    if (error) throw error;
-
+    const res = await axios.get(`/api/products?${params.toString()}`);
+    
     return {
-      products: (data || []).map(mapProductData),
-      totalCount: count
+      products: (res.data?.data || []).map(mapProductData),
+      totalCount: res.data?.count || 0
     };
   } catch (err) {
     console.error('Error fetching storefront products:', err);
@@ -95,15 +65,8 @@ export const fetchStorefrontProducts = async (filters, page = 1, limit = 12) => 
 
 export const fetchFeaturedProducts = async (limit = 4) => {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, slug, price, sale_price, stock, rating, new_arrival, featured, created_at, category:categories(name), images:product_images(image_url, is_primary)')
-      .eq('is_active', true)
-      .eq('featured', true)
-      .limit(limit);
-
-    if (error) throw error;
-    return (data || []).map(mapProductData);
+    const res = await axios.get(`/api/products?type=featured&limit=${limit}`);
+    return (res.data?.data || []).map(mapProductData);
   } catch (err) {
     console.error('Error fetching featured products:', err);
     return [];
@@ -112,15 +75,8 @@ export const fetchFeaturedProducts = async (limit = 4) => {
 
 export const fetchRecentProducts = async (limit = 4) => {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('id, name, slug, price, sale_price, stock, rating, new_arrival, featured, created_at, category:categories(name), images:product_images(image_url, is_primary)')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    return (data || []).map(mapProductData);
+    const res = await axios.get(`/api/products?type=recent&limit=${limit}`);
+    return (res.data?.data || []).map(mapProductData);
   } catch (err) {
     console.error('Error fetching recent products:', err);
     return [];
@@ -129,24 +85,18 @@ export const fetchRecentProducts = async (limit = 4) => {
 
 export const fetchRelatedProducts = async (categoryId, excludeId, limit = 4) => {
   try {
-    let query = supabase
-      .from('products')
-      .select('id, name, slug, price, sale_price, stock, rating, new_arrival, featured, created_at, category:categories(name), images:product_images(image_url, is_primary)')
-      .eq('is_active', true)
-      .limit(limit);
-      
-    if (categoryId) {
-      query = query.eq('category_id', categoryId);
-    }
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
+    const params = new URLSearchParams({
+      type: 'related',
+      limit: String(limit)
+    });
+    if (categoryId) params.append('categoryId', categoryId);
+    if (excludeId) params.append('excludeId', excludeId);
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []).map(mapProductData);
+    const res = await axios.get(`/api/products?${params.toString()}`);
+    return (res.data?.data || []).map(mapProductData);
   } catch (err) {
     console.error('Error fetching related products:', err);
     return [];
   }
 };
+

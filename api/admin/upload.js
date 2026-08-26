@@ -1,4 +1,3 @@
-import { put } from '@vercel/blob';
 import jwt from 'jsonwebtoken';
 
 export const config = {
@@ -32,6 +31,7 @@ export default async function handler(req, res) {
   const filename = req.query.filename || `product-image-${Date.now()}.png`;
 
   try {
+    const { put } = await import('@vercel/blob');
     const blob = await put(filename, req, {
       access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN

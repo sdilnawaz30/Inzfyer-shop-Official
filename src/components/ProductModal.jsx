@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon, Sparkles, AlertCircle, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import axios from 'axios';
 import { processImageForUpload } from '../utils/imageProcessing';
 
 const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [], onAddNewCategory, showToast }) => {
@@ -159,37 +160,44 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
       if (!formData.name.trim()) throw new Error("Product name is required.");
       if (!formData.sku.trim()) throw new Error("SKU is required.");
 
-      // 2. Validate Duplicate SKU
+      // 2. Extract auth token for backend validation
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Authentication required for validation.");
+      
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       let productId = productToEdit?.id || createdProductId;
-      
-      const { data: skuCheck, error: skuErr } = await supabase
-        .from('products')
-        .select('id')
-        .eq('sku', formData.sku.trim())
-        .maybeSingle();
-      
-      if (skuErr) throw new Error(`Database error while verifying SKU: ${skuErr.message}`);
-      if (skuCheck && skuCheck.id !== productId) {
-        throw new Error(`A product with SKU '${formData.sku}' already exists.`);
-      }
 
       // 3. Generate Safe Unique Slug
       let baseSlug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
       let finalSlug = productToEdit?.slug;
 
-      if (!finalSlug) {
-        let slugIsUnique = false;
-        let slugCounter = 0;
-        while (!slugIsUnique) {
-          const testSlug = slugCounter === 0 ? baseSlug : `${baseSlug}-${slugCounter}`;
-          const { data: slugCheck, error: checkErr } = await supabase.from('products').select('id').eq('slug', testSlug).maybeSingle();
-          if (checkErr) throw new Error(`Database error checking slug: ${checkErr.message}`);
-          if (!slugCheck || slugCheck.id === productId) {
-            finalSlug = testSlug;
-            slugIsUnique = true;
-          } else {
-            slugCounter++;
-          }
+      let slugIsUnique = false;
+      let slugCounter = 0;
+      let testSlug = finalSlug || baseSlug;
+
+      while (!slugIsUnique) {
+        // Validate both SKU and Slug in one call (or just slug if iterating)
+        const validatePayload = {
+          sku: slugCounter === 0 ? formData.sku.trim() : undefined, // Only check SKU on first iteration
+          slug: testSlug,
+          excludeProductId: productId
+        };
+
+        const res = await axios.post('/api/admin/products/validate', validatePayload, config);
+        
+        if (slugCounter === 0 && !res.data.skuAvailable) {
+          throw new Error(`A product with SKU '${formData.sku}' already exists.`);
+        }
+
+        if (res.data.slugAvailable) {
+          finalSlug = testSlug;
+          slugIsUnique = true;
+        } else {
+          // If editing and we generated the SAME slug, it's fine. Wait, the backend already checks excludeProductId.
+          // So if it returns false, it truly belongs to ANOTHER product.
+          slugCounter++;
+          testSlug = `${baseSlug}-${slugCounter}`;
         }
       }
 
@@ -254,55 +262,19 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
           featured: formData.featured,
           new_arrival: formData.new_arrival
         };
-
         let stockDiff = 0;
-
-        if (productId) {
-          const oldStock = parseInt(productToEdit?.stock || 0, 10);
-          stockDiff = stock - oldStock;
-          
-          const { error: updateErr } = await supabase.from('products').update(productPayload).eq('id', productId);
-          if (updateErr) throw new Error(`Failed to update product: ${updateErr.message}`);
-        } else {
-          stockDiff = stock;
-          const { data, error: insertErr } = await supabase.from('products').insert(productPayload).select('id').single();
-          if (insertErr) {
-             if (insertErr.message.includes('duplicate key value violates unique constraint')) {
-                throw new Error(`A product with this Slug or SKU already exists. (${insertErr.message})`);
-             }
-             if (insertErr.message.includes('row-level security')) {
-                throw new Error("You don't have permission to create products. Please run the RLS SQL script for the 'products' table.");
-             }
-             throw new Error(`Failed to create product: ${insertErr.message}`);
-          }
-          productId = data.id;
-          setCreatedProductId(productId);
-        }
-
-      // Log inventory movement if stock changed
-      if (stockDiff !== 0) {
-        const { error: moveErr } = await supabase.from('inventory_movements').insert({
-          product_id: productId,
-          movement_type: productToEdit ? 'MANUAL_ADJUSTMENT' : 'RESTOCK',
-          quantity: stockDiff,
-          notes: 'Admin updated catalog'
-        });
-        if (moveErr) console.error("Failed to log inventory movement:", moveErr);
-      }
-
-      // 4. Upsert Images
-      // First, get current DB images to see if any need deleting
-      if (productToEdit) {
-        const { data: existingImgs } = await supabase.from('product_images').select('id, image_url').eq('product_id', productId);
-        const newImgUrls = finalImages.map(img => img.url);
-        const imgsToDelete = existingImgs?.filter(img => !newImgUrls.includes(img.image_url)) || [];
+        const oldStock = productToEdit ? parseInt(productToEdit?.stock || 0, 10) : 0;
+        stockDiff = stock - oldStock;
         
-        if (imgsToDelete.length > 0) {
-          // Delete from DB
-          await supabase.from('product_images').delete().in('id', imgsToDelete.map(img => img.id));
-          
-          // Delete from Storage Bucket
-          const filesToDelete = imgsToDelete
+        // Prepare arrays for backend processing
+        let imgsToDelete = [];
+        if (productToEdit) {
+           const existingImgUrls = productToEdit.images?.map(img => img.image_url) || [];
+           const newImgUrls = finalImages.map(img => img.url);
+           imgsToDelete = (productToEdit.images || []).filter(img => !newImgUrls.includes(img.image_url));
+           
+           // Cleanup storage directly from frontend for deleted images since it relies on anon key
+           const filesToDelete = imgsToDelete
             .map(img => {
               const match = img.image_url.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
               return match ? match[1] : null;
@@ -316,37 +288,24 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
             }
           }
         }
-      }
 
-      // Separate new vs existing images to avoid UUID issues and upsert constraints
-      const newImages = finalImages
-        .filter(img => !img.id)
-        .map((img, idx) => ({
-          product_id: productId,
-          image_url: img.url,
-          sort_order: idx,
-          is_primary: img.is_primary || false
-        }));
-
-      const existingImages = finalImages
-        .filter(img => img.id)
-        .map((img, idx) => ({
-          id: img.id,
-          product_id: productId,
-          image_url: img.url,
-          sort_order: idx,
-          is_primary: img.is_primary || false
-        }));
-
-      if (newImages.length > 0) {
-        const { error: insertImgError } = await supabase.from('product_images').insert(newImages);
-        if (insertImgError) throw insertImgError;
-      }
-
-      if (existingImages.length > 0) {
-        const { error: updateImgError } = await supabase.from('product_images').upsert(existingImages);
-        if (updateImgError) throw updateImgError;
-      }
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const res = await axios.post('/api/admin/action', {
+          action: 'saveProduct',
+          payload: {
+            id: productToEdit?.id || null, // Will trigger insert vs update on backend
+            product: productPayload,
+            newImages: finalImages.filter(img => !img.id).map((img, idx) => ({ image_url: img.url, sort_order: idx, is_primary: img.is_primary || false })),
+            existingImages: finalImages.filter(img => img.id).map((img, idx) => ({ id: img.id, sort_order: idx, is_primary: img.is_primary || false })),
+            imgsToDeleteIds: imgsToDelete ? imgsToDelete.map(img => img.id) : [],
+            stockDiff: stockDiff
+          }
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        
+        if (!res.data.success) {
+           throw new Error(res.data.message || "Failed to save product via backend.");
+        }
+        productId = res.data.productId;
 
         if (showToast) {
           showToast(productToEdit ? "Product successfully updated!" : "Product successfully published!", "success");
@@ -482,16 +441,21 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Selling Price (₹) *</label>
+              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Final Price (Inc. GST) *</label>
               <input required name="price" type="number" step="0.01" min="0" placeholder="1899" value={formData.price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
             </div>
             <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Discount Price (₹)</label>
+              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Discount Price (Inc. GST)</label>
               <input name="sale_price" type="number" step="0.01" min="0" placeholder="Optional" value={formData.sale_price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
             </div>
             <div>
               <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>GST Rate (%) *</label>
-              <input required name="gst_rate" type="number" step="0.01" min="0" max="100" placeholder="18.00" value={formData.gst_rate} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+              <select required name="gst_rate" value={formData.gst_rate} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff' }}>
+                <option value="0">0%</option>
+                <option value="5">5%</option>
+                <option value="12">12%</option>
+                <option value="18">18%</option>
+              </select>
             </div>
           </div>
 

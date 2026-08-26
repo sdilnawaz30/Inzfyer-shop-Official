@@ -1,251 +1,361 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import logoImg from '../assets/logo.png';
 
-export const generateAndDownloadInvoice = (invoiceData) => {
+const getBase64ImageFromUrl = async (imageUrl) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const dataURL = canvas.toDataURL('image/png');
+      resolve(dataURL);
+    };
+    img.onerror = (error) => {
+      reject(error);
+    };
+    img.src = imageUrl;
+  });
+};
+
+export const generateAndDownloadInvoice = async (invoiceData, isPos = false) => {
   const { order, items } = invoiceData;
   const doc = new jsPDF();
   
-  // ==========================================
-  // INVOICE HEADER
-  // ==========================================
+  // A4 size is 210 x 297 mm
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  let currentY = margin;
   
-  // Left side: Logo & Business Info
+  // 1. Header
+  try {
+    const logoBase64 = await getBase64ImageFromUrl(logoImg);
+    doc.addImage(logoBase64, 'PNG', margin, currentY, 40, 15);
+  } catch (error) {
+    console.error('Failed to load logo for PDF', error);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(0, 0, 0);
+    doc.text('INZFYER', margin, currentY + 10);
+  }
+  
+  // Determine if it's paid
+  const isPaid = isPos || order.paymentStatus === 'PAID' || order.paymentStatus === 'SUCCESS';
+  
+  // Right side header
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.setTextColor(31, 41, 55); // Dark Gray
-  doc.text('INZFYER', 14, 20);
+  doc.setFontSize(16);
+  doc.text(isPaid ? 'TAX INVOICE' : 'ORDER SUMMARY', pageWidth - margin, currentY + 6, { align: 'right' });
   
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(75, 85, 99); // Medium Gray
-  doc.text('Luxury Toys & Unique Gifts', 14, 25);
-  doc.text('123 Retail Park, New Delhi, India 110001', 14, 30);
-  doc.text('Phone: +91 98765 43210', 14, 35);
-  doc.text('Email: support@inzfyer.in | Web: www.inzfyer.in', 14, 40);
-  // doc.text('GSTIN: 07AABCU9603R1ZM', 14, 45); // Un-comment when GSTIN is configured
-  
-  const isPaid = order.paymentStatus === 'PAID' || order.paymentStatus === 'SUCCESS';
-  
-  // Right side: TAX INVOICE & Meta
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(17, 24, 39);
-  doc.text(isPaid ? 'TAX INVOICE' : 'BILL OF SUPPLY', 196, 20, { align: 'right' });
-  
-  const invoiceNumber = `INV-${order.orderNumber.split('-')[1] || order.orderNumber}`;
-  const dateFormatted = new Date(order.createdAt).toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
-  
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(`Invoice No: ${invoiceNumber}`, 196, 28, { align: 'right' });
-  doc.text(`Invoice Date: ${dateFormatted}`, 196, 33, { align: 'right' });
-  doc.text(`Order ID: ${order.orderNumber}`, 196, 38, { align: 'right' });
-  doc.text(`Payment Status: ${order.paymentStatus || 'PAID'}`, 196, 43, { align: 'right' });
-  doc.text(`Payment Method: ${order.gatewayPaymentId ? 'Online' : 'Card / UPI'}`, 196, 48, { align: 'right' });
+  doc.text('(Original for Recipient)', pageWidth - margin, currentY + 12, { align: 'right' });
   
-  // Divider
-  doc.setDrawColor(229, 231, 235);
-  doc.line(14, 52, 196, 52);
+  currentY += 25;
   
-  // ==========================================
-  // CUSTOMER / SHIPPING SECTION
-  // ==========================================
-  
-  doc.setFontSize(10);
-  
-  // BILL TO
+  // Business Info (Left)
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(31, 41, 55);
-  doc.text('BILL TO:', 14, 60);
-  
+  doc.setFontSize(9);
+  doc.text('Sold By:', margin, currentY);
   doc.setFont('helvetica', 'normal');
-  doc.text(order.customerName || 'N/A', 14, 66);
+  doc.text('INZFYER Luxury Boutique', margin, currentY + 5);
+  doc.text('123 Retail Park, New Delhi, 110001, IN', margin, currentY + 10);
+  doc.text('Phone: +91 98765 43210', margin, currentY + 15);
+  doc.text('Email: support@inzfyer.in', margin, currentY + 20);
+  doc.text('Web: www.inzfyer.in', margin, currentY + 25);
+  // doc.text('GST Registration No: 07AABCU9603R1ZM', margin, currentY + 30);
   
-  let billY = 72;
-  if (order.address || order.shippingAddress) {
-    const addressText = order.address || `${order.shippingAddress}, ${order.city}, ${order.state} - ${order.pincode}`;
-    const addressLines = doc.splitTextToSize(addressText, 80);
-    doc.text(addressLines, 14, billY);
-    billY += (addressLines.length * 5);
-  }
+  currentY += 40;
   
-  if (order.phone || order.customerPhone) {
-    doc.text(`Phone: ${order.phone || order.customerPhone}`, 14, billY);
-    billY += 6;
-  }
-  if (order.email || order.customerEmail) {
-    doc.text(`Email: ${order.email || order.customerEmail}`, 14, billY);
-  }
+  // Line separator
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += 8;
   
-  // SHIP TO
+  // Order & Invoice Details
+  const invoiceNumber = `INV-${order.orderNumber?.split('-')[1] || order.orderNumber || order.id || 'N/A'}`;
+  const dateFormatted = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
+  
   doc.setFont('helvetica', 'bold');
-  doc.text('SHIP TO:', 110, 60);
-  
+  doc.text(`Order Number:`, margin, currentY);
   doc.setFont('helvetica', 'normal');
-  doc.text(order.customerName || 'N/A', 110, 66);
+  doc.text(String(order.orderNumber || order.id || 'N/A'), margin + 30, currentY);
   
-  let shipY = 72;
-  if (order.address || order.shippingAddress) {
-    const addressText = order.address || `${order.shippingAddress}, ${order.city}, ${order.state} - ${order.pincode}`;
-    const addressLines = doc.splitTextToSize(addressText, 80);
-    doc.text(addressLines, 110, shipY);
-    shipY += (addressLines.length * 5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Invoice Number:`, pageWidth / 2, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceNumber, (pageWidth / 2) + 30, currentY);
+  
+  currentY += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Order Date:`, margin, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dateFormatted, margin + 30, currentY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Invoice Date:`, pageWidth / 2, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dateFormatted, (pageWidth / 2) + 30, currentY);
+  
+  currentY += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Payment Status:`, margin, currentY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(order.paymentStatus || 'PAID', margin + 30, currentY);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Payment Method:`, pageWidth / 2, currentY);
+  doc.setFont('helvetica', 'normal');
+  let payMethod = order.gatewayPaymentId ? 'Online (Card/UPI)' : (order.paymentMethod || 'Cash on Delivery');
+  if (isPos) payMethod = 'In-Store POS';
+  doc.text(payMethod, (pageWidth / 2) + 30, currentY);
+  
+  if (isPos && order.adminId) {
+    currentY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Cashier / Admin:`, margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.adminId, margin + 30, currentY);
   }
   
-  if (order.phone || order.customerPhone) {
-    doc.text(`Phone: ${order.phone || order.customerPhone}`, 110, shipY);
-    shipY += 6;
+  currentY += 8;
+  doc.line(margin, currentY, pageWidth - margin, currentY);
+  currentY += 8;
+  
+  // Billing and Shipping Addresses
+  doc.setFont('helvetica', 'bold');
+  doc.text('Billing Address:', margin, currentY);
+  doc.text('Shipping Address:', pageWidth / 2, currentY);
+  
+  currentY += 6;
+  doc.setFont('helvetica', 'normal');
+  
+  // Safe helper to build address block
+  const customerName = order.customerName || order.customer_name || 'Customer';
+  const customerPhone = order.customerPhone || order.customer_phone || order.phone || '';
+  const customerEmail = order.customerEmail || order.customer_email || order.email || '';
+  const billingAddr = order.billingAddress || order.billing_address || order.address || order.shippingAddress || '';
+  const shippingAddr = order.shippingAddress || order.shipping_address || order.address || '';
+  
+  const bLines = [customerName];
+  if (billingAddr) bLines.push(billingAddr);
+  if (order.city) bLines.push(`${order.city}, ${order.state || ''} ${order.pincode || ''}`);
+  if (customerPhone) bLines.push(`Phone: ${customerPhone}`);
+  if (customerEmail) bLines.push(`Email: ${customerEmail}`);
+  
+  const sLines = [customerName];
+  if (shippingAddr) {
+    if (shippingAddr === billingAddr) {
+      sLines.push('Same as billing address');
+    } else {
+      sLines.push(shippingAddr);
+      if (order.city) sLines.push(`${order.city}, ${order.state || ''} ${order.pincode || ''}`);
+    }
   }
-  if (order.email || order.customerEmail) {
-    doc.text(`Email: ${order.email || order.customerEmail}`, 110, shipY);
-  }
+  if (customerPhone && shippingAddr !== billingAddr) sLines.push(`Phone: ${customerPhone}`);
   
-  // ==========================================
-  // ITEM TABLE
-  // ==========================================
+  doc.text(bLines.filter(Boolean), margin, currentY);
+  doc.text(sLines.filter(Boolean), pageWidth / 2, currentY);
   
-  const startY = Math.max(billY, shipY) + 12;
+  currentY += Math.max(bLines.length, sLines.length) * 5 + 8;
   
+  // Table
   const tableData = items.map((item, index) => {
-    // Determine tax properties depending on if they came from backend
-    const unitPrice = Number(item.unitPrice || 0);
     const qty = Number(item.quantity || item.qty || 1);
+    const unitPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
+    const gstRate = item.gstRate || item.gst_rate ? Number(item.gstRate || item.gst_rate) : 18.0;
+    
+    // Exact DB calculations
+    const basePrice = (item.basePrice || item.base_price) ? Number(item.basePrice || item.base_price) : unitPrice / (1 + gstRate / 100);
+    const taxAmt = (item.taxAmount || item.tax_amount) ? Number(item.taxAmount || item.tax_amount) : (unitPrice - basePrice) * qty;
     const itemSubtotal = unitPrice * qty;
-    const gstRate = item.gstRate ? Number(item.gstRate) : 18.0;
-    const taxAmt = item.taxAmount ? Number(item.taxAmount) : (itemSubtotal * (gstRate / 100));
-    const totalAmt = itemSubtotal + taxAmt;
+    
+    let taxStr = '';
+    const cgstAmt = item.cgstAmount || item.cgst_amount;
+    const sgstAmt = item.sgstAmount || item.sgst_amount;
+    const igstAmt = item.igstAmount || item.igst_amount;
+    
+    if (cgstAmt && Number(cgstAmt) > 0) {
+      taxStr = `CGST: ₹${Number(cgstAmt).toFixed(2)}\nSGST: ₹${Number(sgstAmt).toFixed(2)}`;
+    } else if (igstAmt && Number(igstAmt) > 0) {
+      taxStr = `IGST: ₹${Number(igstAmt).toFixed(2)}`;
+    } else {
+      if ((order.address || order.state || '').toLowerCase().includes('delhi')) {
+        taxStr = `CGST: ₹${(taxAmt/2).toFixed(2)}\nSGST: ₹${(taxAmt/2).toFixed(2)}`;
+      } else {
+        taxStr = `IGST: ₹${taxAmt.toFixed(2)}`;
+      }
+    }
+    
+    const desc = item.productName || item.product_name || item.name;
+    const hsn = item.hsn ? `\nHSN: ${item.hsn}` : '';
+    const fullDesc = `${desc}${hsn}`;
+    const sku = item.sku || `INZ-${(item.productId || item.product_id || item.id || '').substring(0,6).toUpperCase()}`;
     
     if (isPaid) {
       return [
         index + 1,
-        item.productName || item.name,
-        item.sku || `INZ-${(item.productId || item.id || '').substring(0,6).toUpperCase()}`,
+        fullDesc,
+        sku,
         qty,
-        `₹${unitPrice.toFixed(2)}`,
-        `${gstRate.toFixed(2)}%`,
-        `₹${taxAmt.toFixed(2)}`,
-        `₹${totalAmt.toFixed(2)}`
+        `₹${basePrice.toFixed(2)}`,
+        `₹0.00`,
+        `₹${(basePrice * qty).toFixed(2)}`,
+        taxStr,
+        `₹${itemSubtotal.toFixed(2)}`
       ];
     } else {
       return [
         index + 1,
-        item.productName || item.name,
-        item.sku || `INZ-${(item.productId || item.id || '').substring(0,6).toUpperCase()}`,
+        fullDesc,
+        sku,
         qty,
         `₹${unitPrice.toFixed(2)}`,
-        `₹${totalAmt.toFixed(2)}`
+        `₹${itemSubtotal.toFixed(2)}`
       ];
     }
   });
   
   const headCells = isPaid 
-    ? [['S.No', 'Product Description', 'SKU', 'Qty', 'Unit Price', 'Tax %', 'Tax Amount', 'Total Amount']]
-    : [['S.No', 'Product Description', 'SKU', 'Qty', 'Unit Price', 'Total Amount']];
-
+    ? [['Sl. No', 'Product Description', 'SKU', 'Qty', 'Unit Price\n(Base)', 'Discount', 'Taxable\nAmount', 'Tax', 'Total Amount']]
+    : [['Sl. No', 'Product Description', 'SKU', 'Qty', 'Unit Price\n(Inc. GST)', 'Total Amount']];
+    
   autoTable(doc, {
-    startY: startY,
+    startY: currentY,
     head: headCells,
     body: tableData,
+    theme: 'grid',
     headStyles: { 
-      fillColor: [243, 244, 246], // Light Gray
-      textColor: [55, 65, 81],    // Dark Gray
+      fillColor: [240, 240, 240],
+      textColor: [0, 0, 0],
       fontStyle: 'bold',
-      lineWidth: 0.1,
-      lineColor: [229, 231, 235]
+      lineColor: [150, 150, 150],
+      lineWidth: 0.1
     },
     bodyStyles: {
-      textColor: [75, 85, 99],
-      lineWidth: 0.1,
-      lineColor: [229, 231, 235]
+      textColor: [0, 0, 0],
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1
     },
     styles: { 
-      fontSize: 9,
-      cellPadding: 4
+      fontSize: 8,
+      cellPadding: 3,
+      valign: 'middle'
     },
     columnStyles: isPaid ? {
-      0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 25 },
-      3: { cellWidth: 12, halign: 'center' },
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 10, halign: 'center' },
       4: { halign: 'right' },
-      5: { halign: 'center' },
+      5: { halign: 'right' },
       6: { halign: 'right' },
-      7: { halign: 'right' }
+      7: { halign: 'left' },
+      8: { halign: 'right', fontStyle: 'bold' }
     } : {
       0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 80 },
+      1: { cellWidth: 70 },
       2: { cellWidth: 30 },
       3: { cellWidth: 15, halign: 'center' },
       4: { halign: 'right' },
-      5: { halign: 'right' }
+      5: { halign: 'right', fontStyle: 'bold' }
     },
-    alternateRowStyles: { fillColor: [252, 252, 252] },
+    didDrawPage: (data) => {
+      // Re-calculate currentY based on table height
+      currentY = data.cursor.y;
+    }
   });
   
-  // ==========================================
-  // FOOTER / SUMMARY
-  // ==========================================
+  // Totals Section
+  currentY = doc.lastAutoTable.finalY + 10;
   
-  let finalY = doc.lastAutoTable.finalY + 12;
+  const orderSubtotal = Number(order.subtotal || 0);
+  const orderDiscount = Number(order.discount || 0);
+  const orderShipping = Number(order.shippingCharge || order.shipping_charge || 0);
+  const orderTax = Number(order.taxAmount || order.tax_amount || 0);
+  const orderTotal = Number(order.finalTotal || order.final_total || order.totalAmount || order.total || 0);
   
-  // Summary block aligned right
-  const summaryX1 = 145; // Label column
-  const summaryX2 = 196; // Amount column
+  const sumX1 = 140;
+  const sumX2 = 196;
   
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(55, 65, 81);
-  
-  doc.text('Subtotal:', summaryX1, finalY);
-  doc.text(`₹${Number(order.subtotal || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
-  finalY += 7;
-  
-  if (Number(order.discount) > 0) {
-    doc.text('Total Discount:', summaryX1, finalY);
-    doc.setTextColor(22, 163, 74); // Green
-    doc.text(`- ₹${Number(order.discount).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
-    doc.setTextColor(55, 65, 81);
-    finalY += 7;
-  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
   
   if (isPaid) {
-    doc.text('Shipping Charges:', summaryX1, finalY);
-    doc.text(`₹${Number(order.shippingCharge || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
-    finalY += 7;
+    const taxableAmt = orderSubtotal - orderTax;
     
-    doc.text('Total Tax:', summaryX1, finalY);
-    doc.text(`₹${Number(order.taxAmount || 0).toFixed(2)}`, summaryX2, finalY, { align: 'right' });
-    finalY += 7;
+    doc.text('Item Subtotal (Base):', sumX1, currentY);
+    doc.text(`₹${taxableAmt.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+    currentY += 6;
+    
+    if (orderDiscount > 0) {
+      doc.text('Discount:', sumX1, currentY);
+      doc.text(`-₹${orderDiscount.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+      currentY += 6;
+    }
+    
+    doc.text('Taxable Amount:', sumX1, currentY);
+    doc.text(`₹${(taxableAmt - orderDiscount).toFixed(2)}`, sumX2, currentY, { align: 'right' });
+    currentY += 6;
+    
+    doc.text('Shipping:', sumX1, currentY);
+    doc.text(`₹${orderShipping.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+    currentY += 6;
+    
+    doc.text('GST / Tax:', sumX1, currentY);
+    doc.text(`₹${orderTax.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+    currentY += 8;
+  } else {
+    // Unpaid/Customer view
+    doc.text('Subtotal (Inc. GST):', sumX1, currentY);
+    doc.text(`₹${orderSubtotal.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+    currentY += 6;
+    
+    if (orderDiscount > 0) {
+      doc.text('Discount:', sumX1, currentY);
+      doc.text(`-₹${orderDiscount.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+      currentY += 6;
+    }
+    
+    doc.text('Shipping:', sumX1, currentY);
+    doc.text(`₹${orderShipping.toFixed(2)}`, sumX2, currentY, { align: 'right' });
+    currentY += 8;
   }
   
-  // Grand Total Line
-  doc.setDrawColor(229, 231, 235);
-  doc.line(summaryX1, finalY - 4, summaryX2, finalY - 4);
+  // Grand Total Box
+  doc.setFillColor(240, 240, 240);
+  doc.rect(sumX1 - 2, currentY - 5, (sumX2 - sumX1) + 4, 8, 'F');
   
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(17, 24, 39);
-  doc.text('Grand Total:', summaryX1, finalY + 2);
-  doc.text(`₹${Number(order.finalTotal || order.totalAmount || 0).toFixed(2)}`, summaryX2, finalY + 2, { align: 'right' });
+  doc.setFontSize(10);
+  doc.text('TOTAL AMOUNT:', sumX1, currentY);
+  doc.text(`₹${orderTotal.toFixed(2)}`, sumX2, currentY, { align: 'right' });
   
-  // Authorized Signatory
+  // Footer
+  const pageHeightLimit = doc.internal.pageSize.height;
+  if (currentY > pageHeightLimit - 30) {
+    doc.addPage();
+  }
+  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(31, 41, 55);
-  doc.text('For INZFYER', 196, finalY + 25, { align: 'right' });
+  doc.text('For INZFYER Luxury Boutique', pageWidth - margin, pageHeightLimit - 25, { align: 'right' });
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text('Authorized Signatory', 196, finalY + 40, { align: 'right' });
+  doc.text('Authorized Signatory', pageWidth - margin, pageHeightLimit - 15, { align: 'right' });
   
-  // Professional concluding note at bottom center
   doc.setFont('helvetica', 'italic');
-  doc.setFontSize(9);
-  doc.setTextColor(107, 114, 128); // Light Gray
-  doc.text('Thank you for shopping with INZFYER. This is a computer generated invoice and does not require a physical signature.', 105, 285, { align: 'center' });
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Thank you for shopping with INZFYER Luxury Boutique.', pageWidth / 2, pageHeightLimit - 10, { align: 'center' });
+  doc.text('This is a computer-generated invoice and does not require a signature.', pageWidth / 2, pageHeightLimit - 5, { align: 'center' });
   
-  // Download
-  doc.save(`INZFYER_Tax_Invoice_${invoiceNumber}.pdf`);
+  doc.save(`INZFYER_TAX_INVOICE_${invoiceNumber}.pdf`);
 };

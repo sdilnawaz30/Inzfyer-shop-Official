@@ -48,7 +48,7 @@ const OrderSuccessPage = ({ setActivePage }) => {
     
     try {
       setIsDownloading(true);
-      generateAndDownloadInvoice(orderData);
+      await generateAndDownloadInvoice(orderData);
     } catch (error) {
       console.error("Failed to generate invoice:", error);
       alert("Failed to download invoice. Please try again.");
@@ -159,24 +159,18 @@ const OrderSuccessPage = ({ setActivePage }) => {
               </div>
             )}
 
-            {(order.paymentStatus === 'PAID' || order.paymentStatus === 'SUCCESS') && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Shipping Charges</span>
-                  <strong style={{ color: '#1f2937' }}>₹{Number(order.shippingCharge || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Tax (GST)</span>
-                  <strong style={{ color: '#1f2937' }}>₹{Number(order.taxAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-                </div>
-              </>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Shipping Charges</span>
+              <strong style={{ color: '#1f2937' }}>₹{Number(order.shippingCharge || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px dashed #f9a8d4', paddingTop: '1rem', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px dashed #f9a8d4', paddingTop: '1rem', marginBottom: '0.2rem' }}>
             <span style={{ color: '#6b7280', fontSize: '1rem' }}>Grand Total:</span>
             <strong style={{ color: '#db2777', fontSize: '1.25rem' }}>₹{Number(order.finalTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem', fontStyle: 'italic' }}>
+            Prices are inclusive of all taxes
           </div>
         </div>
 

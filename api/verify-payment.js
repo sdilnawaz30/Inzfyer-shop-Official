@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Missing order_id' });
   }
 
-  const appId = process.env.VITE_CASHFREE_APP_ID;
+  const appId = process.env.CASHFREE_APP_ID || process.env.VITE_CASHFREE_APP_ID;
   const secretKey = process.env.CASHFREE_SECRET_KEY;
   const env = process.env.CASHFREE_ENVIRONMENT || 'SANDBOX';
   

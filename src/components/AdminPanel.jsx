@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import axios from 'axios';
 import { 
   LayoutDashboard, 
   Package, 
@@ -54,24 +55,20 @@ const AdminPanel = ({
   const fetchAdminData = async () => {
     setIsLoading(true);
     try {
-      const [catsResponse, prodsResponse, ordersResponse] = await Promise.all([
-        supabase.from('categories').select('*').order('name'),
-        supabase.from('products').select(`
-          *,
-          category:categories(name),
-          images:product_images(*)
-        `).order('created_at', { ascending: false }),
-        supabase.from('orders').select('*').order('created_at', { ascending: false })
+      const [dataResponse] = await Promise.all([
+        axios.get('/api/admin/data', {
+          headers: { Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` }
+        })
       ]);
 
-      if (catsResponse.error) throw catsResponse.error;
-      if (prodsResponse.error) throw prodsResponse.error;
-      if (ordersResponse.error) throw ordersResponse.error;
+      const data = dataResponse.data;
+      if (!data.success) throw new Error("Failed to fetch admin data from backend.");
 
-      setCategories(catsResponse.data || []);
+      setCategories(data.categories || []);
       
       // Transform products for the UI
-      const transformedProducts = (prodsResponse.data || []).map(p => {
+      // Transform products for the UI
+      const transformedProducts = (data.products || []).map(p => {
         // Find primary image or use first one
         const primaryImage = p.images?.find(img => img.is_primary) || p.images?.[0];
         return {
@@ -83,7 +80,8 @@ const AdminPanel = ({
       });
 
       setProducts(transformedProducts);
-      setSalesHistory(ordersResponse.data || []);
+      setSalesHistory(data.orders || []);
+
     } catch (err) {
       console.error(err);
       showToast('Failed to load admin data', 'error');
@@ -105,8 +103,13 @@ const AdminPanel = ({
     const newStatus = !currentStatus;
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: newStatus } : p));
     try {
-      const { error } = await supabase.from('products').update({ is_active: newStatus }).eq('id', id);
-      if (error) throw error;
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await axios.post('/api/admin/action', {
+        action: 'toggleProductActive',
+        payload: { id, isActive: newStatus }
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      if (!res.data.success) throw new Error("Failed");
       showToast(`Product ${newStatus ? 'enabled' : 'disabled'}`, 'success');
     } catch (err) {
       console.error(err);
@@ -120,11 +123,12 @@ const AdminPanel = ({
     if (window.confirm(`Are you sure you want to delete ${product.name}?`)) {
       setProducts(prev => prev.filter(p => p.id !== product.id));
       try {
-        const { data: images } = await supabase.from('product_images').select('image_url').eq('product_id', product.id);
-        if (images && images.length > 0) {
-          const filesToDelete = images
+        // Find product images to delete from Storage (since backend only deletes from DB)
+        const product = products.find(p => p.id === product.id);
+        if (product && product.images && product.images.length > 0) {
+          const filesToDelete = product.images
             .map(img => {
-              const match = img.image_url.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
+              const match = img.image_url?.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
               return match ? match[1] : null;
             })
             .filter(Boolean);
@@ -133,8 +137,15 @@ const AdminPanel = ({
             await supabase.storage.from('product-images').remove(filesToDelete);
           }
         }
-        const { error } = await supabase.from('products').delete().eq('id', product.id);
-        if (error) throw error;
+        
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const res = await axios.post('/api/admin/action', {
+          action: 'deleteProduct',
+          payload: { id: product.id }
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        
+        if (!res.data.success) throw new Error("Failed");
+        
         showToast('Product deleted permanently', 'success');
       } catch (err) {
         console.error(err);
@@ -156,8 +167,13 @@ const AdminPanel = ({
     const newStatus = !currentStatus;
     setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: newStatus } : c));
     try {
-      const { error } = await supabase.from('categories').update({ is_active: newStatus }).eq('id', id);
-      if (error) throw error;
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await axios.post('/api/admin/action', {
+        action: 'toggleCategoryActive',
+        payload: { id, isActive: newStatus }
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      if (!res.data.success) throw new Error("Failed");
       showToast(`Category ${newStatus ? 'enabled' : 'disabled'}`, 'success');
     } catch (err) {
       console.error(err);
@@ -169,8 +185,13 @@ const AdminPanel = ({
   const handleDeleteCategory = async (category) => {
     if (window.confirm(`Are you sure you want to delete category "${category.name}"? Products in this category will become uncategorized.`)) {
       try {
-        const { error } = await supabase.from('categories').delete().eq('id', category.id);
-        if (error) throw error;
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const res = await axios.post('/api/admin/action', {
+          action: 'deleteCategory',
+          payload: { id: category.id }
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        
+        if (!res.data.success) throw new Error("Failed");
         setCategories(prev => prev.filter(c => c.id !== category.id));
         showToast('Category deleted', 'success');
         fetchAdminData();
@@ -184,8 +205,12 @@ const AdminPanel = ({
   const handleUpdateStock = async (id, newStock) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, stock: newStock } : p));
     try {
-      const { error } = await supabase.from('products').update({ stock: newStock }).eq('id', id);
-      if (error) throw error;
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await axios.post('/api/admin/action', {
+        action: 'updateStock',
+        payload: { id, stock: newStock }
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.data.success) throw new Error("Failed");
     } catch (err) {
       console.error(err);
       showToast('Failed to update stock', 'error');
@@ -211,10 +236,28 @@ const AdminPanel = ({
     storeName: 'INZFYER Luxury Gifts',
     contactEmail: 'admin@inzfyer.in',
     currency: 'INR (₹)',
-    freeShippingMin: 1999,
+    freeShippingMin: 1000,
+    tnShippingRate: 55,
+    otherShippingRate: 85,
     taxRate: 5,
     enableCod: true,
   });
+
+  useEffect(() => {
+    fetch('/api/shipping-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setStoreSettings(prev => ({
+            ...prev,
+            freeShippingMin: data.data.freeThreshold,
+            tnShippingRate: data.data.tnRate,
+            otherShippingRate: data.data.otherRate
+          }));
+        }
+      })
+      .catch(err => console.error("Failed to load shipping config", err));
+  }, []);
 
   const sidebarItems = [
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -759,7 +802,8 @@ const AdminPanel = ({
                         onClick={async () => {
                            const newStock = item.stock + 10;
                            setProducts(prev => prev.map(p => p.id === item.id ? { ...p, stock: newStock } : p));
-                           await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: item.id, stock: newStock } });
+                           const token = (await supabase.auth.getSession()).data.session?.access_token;
+                           await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: item.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
                            showToast('Stock level updated!', 'success');
                         }}
                         className="btn btn-primary"
@@ -805,7 +849,8 @@ const AdminPanel = ({
                             onClick={async () => {
                               const newStock = p.stock + 1;
                               setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
-                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                              const token = (await supabase.auth.getSession()).data.session?.access_token;
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
                             }}
                             className="btn btn-ghost"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', borderColor: '#047857', color: '#047857' }}
@@ -817,7 +862,8 @@ const AdminPanel = ({
                             onClick={async () => {
                               const newStock = p.stock + 10;
                               setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
-                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                              const token = (await supabase.auth.getSession()).data.session?.access_token;
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
                             }}
                             className="btn btn-primary"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', background: '#047857', borderColor: '#047857' }}
@@ -835,7 +881,8 @@ const AdminPanel = ({
                             onClick={async () => {
                               const newStock = Math.max(0, p.stock - 1);
                               setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
-                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                              const token = (await supabase.auth.getSession()).data.session?.access_token;
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
                             }}
                             className="btn btn-ghost"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', borderColor: '#dc2626', color: '#dc2626' }}
@@ -847,7 +894,8 @@ const AdminPanel = ({
                             onClick={async () => {
                               const newStock = Math.max(0, p.stock - 5);
                               setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
-                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } });
+                              const token = (await supabase.auth.getSession()).data.session?.access_token;
+                              await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
                             }}
                             className="btn btn-ghost"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', color: '#dc2626' }}
@@ -869,9 +917,19 @@ const AdminPanel = ({
         {activeTab === 'Settings' && (
           <div className="glass glass-card" style={{ background: '#ffffff', maxWidth: '640px' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.5rem' }}>Boutique Operational Settings</h3>
-            <form onSubmit={(e) => { 
+            <form onSubmit={async (e) => { 
               e.preventDefault(); 
-              showToast('Store settings updated successfully!', 'success'); 
+              try {
+                await axios.post('/api/shipping-config', {
+                  tnRate: storeSettings.tnShippingRate,
+                  otherRate: storeSettings.otherShippingRate,
+                  freeThreshold: storeSettings.freeShippingMin
+                });
+                showToast('Store shipping settings updated successfully!', 'success'); 
+              } catch(err) {
+                console.error(err);
+                showToast('Failed to update shipping settings', 'error');
+              }
             }}>
               <div style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label">Store Brand Name</label>
@@ -893,7 +951,7 @@ const AdminPanel = ({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
-                  <label className="form-label">Free Shipping Minimum (₹)</label>
+                  <label className="form-label">Free Shipping Threshold (₹)</label>
                   <input 
                     type="number" 
                     value={storeSettings.freeShippingMin} 
@@ -906,6 +964,25 @@ const AdminPanel = ({
                     type="number" 
                     value={storeSettings.taxRate} 
                     onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div>
+                  <label className="form-label">Tamil Nadu Shipping Rate (₹)</label>
+                  <input 
+                    type="number" 
+                    value={storeSettings.tnShippingRate} 
+                    onChange={(e) => setStoreSettings({ ...storeSettings, tnShippingRate: Number(e.target.value) })}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Other States Shipping Rate (₹)</label>
+                  <input 
+                    type="number" 
+                    value={storeSettings.otherShippingRate} 
+                    onChange={(e) => setStoreSettings({ ...storeSettings, otherShippingRate: Number(e.target.value) })}
                   />
                 </div>
               </div>

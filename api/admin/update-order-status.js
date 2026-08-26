@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { getDb } from '../../src/db/index.js';
 import * as schema from '../../src/db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 import { createClient } from '@supabase/supabase-js';
-import { enqueueNotification } from '../utils/notifications.js';
+import { enqueueNotification } from '../_utils/notifications.js';
 
 // Setup admin Supabase client using Service Role to query profiles and verify user
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'placeholder_key';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const updateStatusSchema = z.object({
@@ -33,14 +33,14 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: 'Invalid token.' });
     }
 
-    // Verify Admin Role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+    // Verify Admin Role using Neon DB
+    const db = getDb();
+    const profile = await db.select({ role: schema.profiles.role })
+      .from(schema.profiles)
+      .where(eq(schema.profiles.id, user.id))
+      .limit(1);
 
-    if (!profile || profile.role !== 'admin') {
+    if (profile.length === 0 || profile[0].role !== 'admin') {
       return res.status(403).json({ message: 'Forbidden. Admin access required.' });
     }
 
@@ -51,17 +51,18 @@ export default async function handler(req, res) {
     }
     const { orderId, newStatus } = parsed.data;
 
-    const db = getDb();
-
     // 3. Fetch current order
-    const [existingOrder] = await db.select().from(schema.orders).where(eq(schema.orders.orderId, orderId)).limit(1);
+    const [existingOrder] = await db.select().from(schema.orders).where(
+      or(eq(schema.orders.orderNumber, orderId), eq(schema.orders.id, orderId))
+    ).limit(1);
+
     if (!existingOrder) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
     const currentStatus = existingOrder.orderStatus;
-    const isCurrentlyCancelled = currentStatus === 'Cancelled' || currentStatus === 'Refunded';
-    const isMovingToCancelled = newStatus === 'Cancelled' || newStatus === 'Refunded';
+    const isCurrentlyCancelled = currentStatus === 'Cancelled' || currentStatus === 'CANCELLED' || currentStatus === 'Refunded' || currentStatus === 'REFUNDED';
+    const isMovingToCancelled = newStatus.toUpperCase() === 'CANCELLED' || newStatus.toUpperCase() === 'REFUNDED';
 
     // 4. Update Database
     await db.transaction(async (tx) => {
@@ -93,9 +94,9 @@ export default async function handler(req, res) {
       }
       
       // Enqueue notification based on new status
-      const notificationType = newStatus === 'Refunded' ? 'REFUND_COMPLETED' : `ORDER_${newStatus.toUpperCase()}`;
+      const notificationType = newStatus.toUpperCase() === 'REFUNDED' ? 'REFUND_COMPLETED' : `ORDER_${newStatus.toUpperCase()}`;
       const contact = existingOrder.email || existingOrder.phone;
-      if (['Processing', 'Shipped', 'Delivered', 'Cancelled', 'Refunded'].includes(newStatus)) {
+      if (['Processing', 'Shipped', 'Delivered', 'Cancelled', 'Refunded', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'].includes(newStatus)) {
         await enqueueNotification(tx, existingOrder.id, contact, notificationType);
       }
     });

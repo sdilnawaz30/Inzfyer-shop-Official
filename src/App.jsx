@@ -88,14 +88,12 @@ function App() {
   useEffect(() => {
     const checkUser = async (session) => {
       if (session?.user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        if (!error && data?.role === 'admin') {
-          setIsAdmin(true);
-        } else {
+        try {
+          const res = await axios.get('/api/admin/check', {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          });
+          setIsAdmin(res.data?.success && res.data?.data?.is_admin);
+        } catch (error) {
           setIsAdmin(false);
         }
       } else {
@@ -132,28 +130,20 @@ function App() {
 
   // Cart operations
   const handleAddToCart = useCallback((productToAdd) => {
-    const existing = cart.find(item => item.id === productToAdd.id);
-    const qtyToAdd = productToAdd.qty || 1;
-    const newQty = existing ? existing.qty + qtyToAdd : qtyToAdd;
-
-    if (productToAdd.stock !== undefined && newQty > productToAdd.stock) {
-      showToast(`Cannot add more. Only ${productToAdd.stock} in stock.`, 'warning');
-      return;
-    }
-
     setCart(prev => {
-      const innerExisting = prev.find(item => item.id === productToAdd.id);
-      if (innerExisting) {
+      const existing = prev.find(item => item.id === productToAdd.id);
+      const qtyToAdd = productToAdd.qty || 1;
+      if (existing) {
         return prev.map(item => 
           item.id === productToAdd.id 
-            ? { ...item, qty: innerExisting.qty + qtyToAdd, giftNote: productToAdd.giftNote || item.giftNote }
+            ? { ...item, qty: item.qty + qtyToAdd, giftNote: productToAdd.giftNote || item.giftNote }
             : item
         );
       }
       return [...prev, { ...productToAdd, qty: qtyToAdd }];
     });
     showToast(`Added "${productToAdd.name}" to shopping cart!`, 'cart');
-  }, [cart]);
+  }, []);
 
   const handleBuyNow = useCallback((productToBuy) => {
     handleAddToCart(productToBuy);
@@ -166,11 +156,9 @@ function App() {
     showToast('Item removed from cart', 'info');
   }, []);
 
-  const handleUpdateCartQty = useCallback((id, newQty, stock) => {
+  const handleUpdateCartQty = useCallback((id, newQty) => {
     if (newQty <= 0) {
       handleRemoveFromCart(id);
-    } else if (stock !== undefined && newQty > stock) {
-      showToast(`Maximum stock of ${stock} reached`, 'warning');
     } else {
       setCart(prev => prev.map(item => item.id === id ? { ...item, qty: newQty } : item));
     }

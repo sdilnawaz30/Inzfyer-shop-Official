@@ -68,6 +68,10 @@ export const orders = pgTable('orders', {
   shippingCharge: numeric('shipping_charge', { precision: 10, scale: 2 }).notNull().default('0'),
   discount: numeric('discount', { precision: 10, scale: 2 }).notNull().default('0'),
   taxAmount: numeric('tax_amount', { precision: 10, scale: 2 }).notNull().default('0'),
+  cgstAmount: numeric('cgst_amount', { precision: 10, scale: 2 }).default('0'),
+  sgstAmount: numeric('sgst_amount', { precision: 10, scale: 2 }).default('0'),
+  igstAmount: numeric('igst_amount', { precision: 10, scale: 2 }).default('0'),
+  baseSubtotal: numeric('base_subtotal', { precision: 10, scale: 2 }).default('0'),
   totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
   paymentStatus: text('payment_status').default('PENDING'),
   orderStatus: text('order_status').default('PENDING_PAYMENT'),
@@ -92,7 +96,11 @@ export const orderItems = pgTable('order_items', {
   quantity: integer('quantity').notNull(),
   unitPrice: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
   subtotal: numeric('subtotal', { precision: 10, scale: 2 }).notNull(),
+  basePrice: numeric('base_price', { precision: 10, scale: 2 }).default('0'),
   taxAmount: numeric('tax_amount', { precision: 10, scale: 2 }).default('0'),
+  cgstAmount: numeric('cgst_amount', { precision: 10, scale: 2 }).default('0'),
+  sgstAmount: numeric('sgst_amount', { precision: 10, scale: 2 }).default('0'),
+  igstAmount: numeric('igst_amount', { precision: 10, scale: 2 }).default('0'),
   gstRate: numeric('gst_rate', { precision: 5, scale: 2 }).default('18.00'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
@@ -127,3 +135,10 @@ export const notifications = pgTable('notifications', {
   };
 });
 
+export const shippingSettings = pgTable('shipping_settings', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tnRate: numeric('tn_rate', { precision: 10, scale: 2 }).default('55.00').notNull(),
+  otherRate: numeric('other_rate', { precision: 10, scale: 2 }).default('85.00').notNull(),
+  freeThreshold: numeric('free_threshold', { precision: 10, scale: 2 }).default('1000.00').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});

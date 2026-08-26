@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Plus, Minus, Trash2, ShoppingCart, CheckCircle2, Search, Barcode, Printer, Tag, DollarSign, Percent, RefreshCw } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generateAndDownloadInvoice } from '../utils/invoiceGenerator';
 
 const PosView = ({ products, onCompleteSale }) => {
   const [cart, setCart] = useState([]);
@@ -73,7 +72,14 @@ const PosView = ({ products, onCompleteSale }) => {
   };
 
   // Calculations
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  // In a GST-inclusive pricing system, price = final price.
+  let subtotal = 0; // Final subtotal (inclusive of tax)
+  let totalTax = 0;
+
+  cart.forEach(item => {
+    const itemTotal = item.price * item.qty;
+    subtotal += itemTotal;
+  });
   
   let calculatedDiscount = 0;
   if (discountType === 'PERCENT') {
@@ -84,85 +90,21 @@ const PosView = ({ products, onCompleteSale }) => {
   calculatedDiscount = Math.min(subtotal, calculatedDiscount);
 
   const discountedSubtotal = Math.max(0, subtotal - calculatedDiscount);
-  
   const discountRatio = subtotal > 0 ? calculatedDiscount / subtotal : 0;
-  const tax = cart.reduce((sum, item) => {
+  
+  // Back-calculate tax from the discounted final total per item
+  cart.forEach(item => {
     const itemTotal = item.price * item.qty;
     const discountedItemTotal = itemTotal * (1 - discountRatio);
     const gstRate = item.gst_rate != null ? Number(item.gst_rate) : 18;
-    return sum + (discountedItemTotal * (gstRate / 100));
-  }, 0);
+    const basePrice = discountedItemTotal / (1 + (gstRate / 100));
+    const itemTax = discountedItemTotal - basePrice;
+    totalTax += itemTax;
+  });
 
-  const total = discountedSubtotal + tax;
+  const total = discountedSubtotal; // Total is just the discounted subtotal (already includes tax)
 
-  // Print Bill / Download Receipt PDF
-  const generateReceiptPDF = (saleData) => {
-    const doc = new jsPDF();
-    
-    doc.setFillColor(243, 199, 191);
-    doc.rect(0, 0, 210, 32, 'F');
-    
-    doc.setFont("serif", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(166, 58, 75);
-    doc.text("INZFYER LUXURY BOUTIQUE", 105, 18, { align: "center" });
-    
-    doc.setFont("sans-serif", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(92, 67, 71);
-    doc.text("In-Store Point of Sale Thermal Receipt", 105, 26, { align: "center" });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(44, 24, 27);
-    doc.text(`Receipt Ref: ${saleData.orderId}`, 14, 42);
-    doc.text(`Date & Time: ${new Date(saleData.timestamp).toLocaleString()}`, 14, 48);
-    doc.text(`Terminal: POS Counter #01`, 140, 42);
-
-    const tableRows = (saleData.items || []).map((item, index) => [
-      index + 1,
-      item.name,
-      item.sku || `INZ-${item.id.toUpperCase()}`,
-      `₹${item.price.toLocaleString('en-IN')}`,
-      item.qty,
-      `₹${(item.price * item.qty).toLocaleString('en-IN')}`
-    ]);
-
-    autoTable(doc, {
-      startY: 55,
-      head: [['#', 'Item Description', 'SKU', 'Unit Price', 'Qty', 'Amount']],
-      body: tableRows,
-      headStyles: { fillColor: [166, 58, 75], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 9 },
-    });
-
-    const finalY = doc.lastAutoTable.finalY + 10;
-    doc.setFontSize(10);
-    doc.text(`Subtotal:`, 140, finalY);
-    doc.text(`₹${saleData.subtotal.toLocaleString('en-IN')}`, 180, finalY);
-
-    if (saleData.discount > 0) {
-      doc.text(`Discount:`, 140, finalY + 6);
-      doc.text(`- ₹${saleData.discount.toLocaleString('en-IN')}`, 180, finalY + 6);
-    }
-
-    doc.text(`GST Tax:`, 140, finalY + 12);
-    doc.text(`₹${Math.round(saleData.tax).toLocaleString('en-IN')}`, 180, finalY + 12);
-
-    doc.setFontSize(12);
-    doc.setFont("sans-serif", "bold");
-    doc.setTextColor(166, 58, 75);
-    doc.text(`TOTAL PAID:`, 140, finalY + 20);
-    doc.text(`₹${Math.round(saleData.total).toLocaleString('en-IN')}`, 180, finalY + 20);
-
-    doc.setFontSize(9);
-    doc.setFont("sans-serif", "italic");
-    doc.setTextColor(148, 117, 122);
-    doc.text("Thank you for shopping at INZFYER Luxury Boutique! Handcrafted with Love.", 105, finalY + 36, { align: "center" });
-
-    doc.save(`INZFYER_POS_Receipt_${saleData.orderId}.pdf`);
-  };
-
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length > 0) {
       const saleRecord = {
         id: Date.now().toString(),
@@ -171,14 +113,37 @@ const PosView = ({ products, onCompleteSale }) => {
         items: [...cart],
         subtotal: subtotal,
         discount: calculatedDiscount,
-        tax: tax,
+        tax: totalTax,
         total: total,
         paymentMethod: 'POS Counter (Cash/Card/UPI)'
       };
 
+      const invoiceData = {
+        order: {
+          id: saleRecord.id,
+          orderNumber: saleRecord.orderId,
+          createdAt: saleRecord.timestamp,
+          paymentStatus: 'PAID', // POS implies instant payment
+          paymentMethod: saleRecord.paymentMethod,
+          subtotal: saleRecord.subtotal,
+          discount: saleRecord.discount,
+          taxAmount: saleRecord.tax,
+          finalTotal: saleRecord.total,
+          customerName: 'POS Customer',
+          adminId: 'POS Terminal #01'
+        },
+        items: cart
+      };
+
       onCompleteSale(cart, saleRecord);
       setLastCompletedSale(saleRecord);
-      generateReceiptPDF(saleRecord);
+      
+      try {
+        await generateAndDownloadInvoice(invoiceData, true);
+      } catch (err) {
+        console.error("Failed to generate PDF", err);
+      }
+      
       setCart([]);
       setDiscountAmount(0);
     }
@@ -369,14 +334,13 @@ const PosView = ({ products, onCompleteSale }) => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#5C4347', marginBottom: '0.75rem' }}>
-                <span>GST Tax</span>
-                <span>₹{Math.round(tax).toLocaleString('en-IN')}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#8C2E3C', fontSize: '0.9rem' }}>
+                <span>Included Tax</span>
+                <span>₹{totalTax.toFixed(2)}</span>
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: 800, color: '#A63A4B', marginBottom: '1.25rem' }}>
-                <span>Total Amount</span>
-                <span>₹{Math.round(total).toLocaleString('en-IN')}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.8rem', paddingTop: '0.8rem', borderTop: '2px solid rgba(166, 58, 75, 0.2)', color: '#2C181B', fontSize: '1.25rem', fontWeight: 800 }}>
+                <span>Total (Inc. GST)</span>
+                <span>₹{total.toFixed(2)}</span>
               </div>
 
               <button 

@@ -30,8 +30,8 @@ export default async function handler(req, res) {
     }
 
     // Authenticate (Basic validation using email or mobile)
-    const orderEmail = (existingOrder.customerEmail || '').toLowerCase().trim();
-    const orderPhone = (existingOrder.customerPhone || '').trim();
+    const orderEmail = (existingOrder.email || existingOrder.customerEmail || '').toLowerCase().trim();
+    const orderPhone = (existingOrder.phone || existingOrder.customerPhone || '').trim();
     const providedContact = contact.toLowerCase().trim();
 
     if (providedContact !== orderEmail && providedContact !== orderPhone) {

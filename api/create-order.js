@@ -1,11 +1,15 @@
+import axios from 'axios';
 import { z } from 'zod';
 import { getDb } from '../src/db/index.js';
 import * as schema from '../src/db/schema.js';
 import { inArray, eq, and, gte, sql } from 'drizzle-orm';
-import { enqueueNotification } from './utils/notifications.js';
+import { enqueueNotification } from './_utils/notifications.js';
+import { getShipping } from '../src/utils/shipping.js';
 
 // Zod schema for input validation
 const orderSchema = z.object({
+  pincode: z.string().regex(/^\d{6}$/, "Invalid pincode"),
+  subtotal: z.number().min(0, "Invalid subtotal"),
   items: z.array(z.object({
     id: z.string().uuid(),
     qty: z.number().int().positive()
@@ -53,68 +57,130 @@ export default async function handler(req, res) {
         message: 'Order already created'
       });
     }
+
+    // 2. Fetch True Prices from DB (Never trust frontend price)
     const productIds = items.map(item => item.id);
     const dbProducts = await db.select().from(schema.products).where(inArray(schema.products.id, productIds));
-    
+
     if (dbProducts.length !== items.length) {
-       return res.status(400).json({ message: 'Invalid items in cart. Some products may be unavailable.' });
+      return res.status(400).json({ message: 'Invalid items in cart. Some products may be unavailable.' });
     }
 
     // 3. Calculate exact subtotal and verify stock
-    let subtotal = 0;
+    let subtotal = 0; // Final subtotal inclusive of tax
+    let totalTax = 0;
+    let totalCgst = 0;
+    let totalSgst = 0;
+    let totalIgst = 0;
+    let baseSubtotal = 0;
+
+    // Check state for tax split
+    const isDelhi = customerDetails.state.toLowerCase().includes('delhi');
+
     const enrichedItems = items.map(item => {
       const dbProd = dbProducts.find(p => p.id === item.id);
-      
+
       if (!dbProd.isActive) {
         throw new Error(`Product ${dbProd.name} is no longer available.`);
       }
-      
+
       if (dbProd.stock < item.qty) {
         throw new Error(`Insufficient stock for ${dbProd.name}. Only ${dbProd.stock} left.`);
       }
-      
-      const unitPrice = dbProd.salePrice ? Number(dbProd.salePrice) : Number(dbProd.price);
+
+      const unitPrice = dbProd.salePrice ? Number(dbProd.salePrice) : Number(dbProd.price); // Final price
       const itemSubtotal = unitPrice * item.qty;
-      subtotal += itemSubtotal;
-      
+
       const gstRate = dbProd.gstRate ? Number(dbProd.gstRate) : 18;
-      
-      return { 
-        ...item, 
+      const baseUnitPrice = unitPrice / (1 + (gstRate / 100));
+      const basePriceTotal = baseUnitPrice * item.qty;
+      const taxAmount = itemSubtotal - basePriceTotal;
+
+      let cgst = 0, sgst = 0, igst = 0;
+      if (isDelhi) {
+        cgst = taxAmount / 2;
+        sgst = taxAmount / 2;
+      } else {
+        igst = taxAmount;
+      }
+
+      subtotal += itemSubtotal;
+      baseSubtotal += basePriceTotal;
+      totalTax += taxAmount;
+      totalCgst += cgst;
+      totalSgst += sgst;
+      totalIgst += igst;
+
+      return {
+        ...item,
         unitPrice,
         subtotal: itemSubtotal,
         name: dbProd.name,
-        gstRate
+        gstRate,
+        basePrice: baseUnitPrice,
+        taxAmount,
+        cgstAmount: cgst,
+        sgstAmount: sgst,
+        igstAmount: igst
       };
     });
 
     const discount = 0; // Promotional discounts not implemented yet
-    const freeShipping = subtotal >= 1999;
-    const shippingFee = freeShipping ? 0 : 149;
-    
-    // Proportional discount ratio
-    const discountRatio = subtotal > 0 ? discount / subtotal : 0;
-    
-    // Calculate exact tax per item and add to enriched item
-    let tax = 0;
-    const enrichedItemsWithTax = enrichedItems.map(item => {
-      const discountedItemSubtotal = item.subtotal * (1 - discountRatio);
-      const itemTax = discountedItemSubtotal * (item.gstRate / 100);
-      tax += itemTax;
-      return { ...item, taxAmount: itemTax };
-    });
-    
-    // Total Amount includes tax
-    const totalAmount = subtotal - discount + tax + shippingFee;
+
+    // 4. Validate shipping securely on backend
+    const shippingResult = await getShipping({ pincode: customerDetails.pincode, subtotal });
+    if (!shippingResult.isValid) {
+      return res.status(400).json({ message: shippingResult.error || 'Invalid pincode for shipping' });
+    }
+    const shippingFee = shippingResult.rate;
+    const totalAmount = subtotal - discount + shippingFee;
 
     const orderNumber = `INZ-${Math.floor(100000 + Math.random() * 900000)}`;
     const fullAddress = `${customerDetails.address1}${customerDetails.address2 ? ', ' + customerDetails.address2 : ''}, ${customerDetails.city}, ${customerDetails.state} - ${customerDetails.pincode}`;
 
-    // 4. Database Transaction
+    // 5. Create Cashfree Order Session
+    const appId = process.env.CASHFREE_APP_ID || process.env.VITE_CASHFREE_APP_ID;
+    const secretKey = process.env.CASHFREE_SECRET_KEY;
+    const env = process.env.CASHFREE_ENVIRONMENT || 'SANDBOX';
+    const baseUrl = env === 'PRODUCTION' ? 'https://api.cashfree.com/pg' : 'https://sandbox.cashfree.com/pg';
+
+    let paymentSessionId = null;
+    if (appId && secretKey) {
+      try {
+        const cfResponse = await axios.post(
+          `${baseUrl}/orders`,
+          {
+            order_amount: Number(totalAmount.toFixed(2)),
+            order_currency: 'INR',
+            order_id: orderNumber,
+            customer_details: {
+              customer_id: `CUST_${Date.now()}`,
+              customer_name: customerDetails.name,
+              customer_email: customerDetails.email || 'guest@inzfyer.com',
+              customer_phone: customerDetails.phone,
+            }
+          },
+          {
+            headers: {
+              'x-client-id': appId,
+              'x-client-secret': secretKey,
+              'x-api-version': '2023-08-01',
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          }
+        );
+        paymentSessionId = cfResponse.data.payment_session_id;
+      } catch (cfErr) {
+        console.error('Cashfree API error:', cfErr.response?.data || cfErr.message);
+        throw new Error('Failed to create payment session with payment gateway.');
+      }
+    }
+
+    // 6. Database Transaction in Neon
     const newOrder = await db.transaction(async (tx) => {
-      
       // Update stock for each product atomically
-      for (const item of enrichedItemsWithTax) {
+      for (const item of enrichedItems) {
         const result = await tx.update(schema.products)
           .set({ stock: sql`${schema.products.stock} - ${item.qty}` })
           .where(and(eq(schema.products.id, item.id), gte(schema.products.stock, item.qty)))
@@ -125,7 +191,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // Create Order
+      // Create Order in Neon
       const [order] = await tx.insert(schema.orders).values({
         orderNumber: orderNumber,
         customerName: customerDetails.name,
@@ -135,34 +201,43 @@ export default async function handler(req, res) {
         subtotal: subtotal.toFixed(2),
         shippingCharge: shippingFee.toFixed(2),
         discount: discount.toFixed(2),
-        taxAmount: tax.toFixed(2),
+        taxAmount: totalTax.toFixed(2),
+        cgstAmount: totalCgst.toFixed(2),
+        sgstAmount: totalSgst.toFixed(2),
+        igstAmount: totalIgst.toFixed(2),
+        baseSubtotal: baseSubtotal.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
         paymentStatus: 'PENDING',
         orderStatus: 'PENDING_PAYMENT',
+        gatewayOrderId: orderNumber,
         idempotencyKey: idempotencyKey
       }).returning();
 
       // Create Order Items
-      const orderItemsToInsert = enrichedItemsWithTax.map(item => ({
+      const orderItemsToInsert = enrichedItems.map(item => ({
         orderId: order.id,
         productId: item.id,
         productName: item.name,
         quantity: item.qty,
-        unitPrice: item.unitPrice,
-        subtotal: item.subtotal,
-        gstRate: item.gstRate.toFixed(2),
-        taxAmount: item.taxAmount.toFixed(2)
+        unitPrice: item.unitPrice.toFixed(2),
+        subtotal: item.subtotal.toFixed(2),
+        basePrice: item.basePrice.toFixed(2),
+        taxAmount: item.taxAmount.toFixed(2),
+        cgstAmount: item.cgstAmount.toFixed(2),
+        sgstAmount: item.sgstAmount.toFixed(2),
+        igstAmount: item.igstAmount.toFixed(2),
+        gstRate: item.gstRate.toFixed(2)
       }));
 
       await tx.insert(schema.orderItems).values(orderItemsToInsert);
 
       // Insert inventory movements for sales
-      const inventoryMovementsToInsert = enrichedItemsWithTax.map(item => ({
+      const inventoryMovementsToInsert = enrichedItems.map(item => ({
         productId: item.id,
         movementType: 'SALE',
         quantity: -item.qty,
         referenceId: orderNumber,
-        notes: `Order checkout`
+        notes: 'Order checkout'
       }));
       await tx.insert(schema.inventoryMovements).values(inventoryMovementsToInsert);
 
@@ -173,9 +248,10 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      paymentSessionId: paymentSessionId,
       orderData: {
         orderId: newOrder.orderNumber,
-        totalAmount,
+        totalAmount: Number(totalAmount.toFixed(2)),
         customerName: newOrder.customerName,
         email: newOrder.email,
         items: items
