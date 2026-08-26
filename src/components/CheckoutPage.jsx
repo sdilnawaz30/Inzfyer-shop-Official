@@ -126,8 +126,13 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
 
         onCompleteCheckout(createOrderRes.data.orderData);
 
+        const cashfreeMode = (
+          import.meta.env.VITE_CASHFREE_MODE ||
+          (import.meta.env.PROD ? 'production' : 'sandbox')
+        ).toLowerCase();
+
         const cashfree = await load({
-          mode: "sandbox", // CHANGE TO "production" for live
+          mode: cashfreeMode === 'production' ? 'production' : 'sandbox',
         });
 
         cashfree.checkout({
