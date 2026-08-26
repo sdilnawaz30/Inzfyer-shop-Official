@@ -1,6 +1,12 @@
 {
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/api/categories", "destination": "/api/products?resource=categories" },
+    { "source": "/api/get-invoice", "destination": "/api/orders?action=invoice" },
+    { "source": "/api/cancel-order", "destination": "/api/orders?action=cancel" },
+    { "source": "/api/admin/check", "destination": "/api/admin/data?checkOnly=true" },
+    { "source": "/api/admin/update-order-status", "destination": "/api/admin/action?action=updateOrderStatus" },
+    { "source": "/api/admin/products/validate", "destination": "/api/admin/action?action=validateSkuSlug" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

@@ -4,11 +4,34 @@ import { eq, and, or, ilike, lte, gt, desc, asc, ne, inArray } from 'drizzle-orm
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+    return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
 
   try {
     const db = getDb();
+
+    // 1. CONSOLIDATED: Categories Query (Rewritten from /api/categories)
+    if (req.query.resource === 'categories' || req.query.categories === 'true') {
+      const categories = await db.select({
+        id: schema.categories.id,
+        name: schema.categories.name,
+        slug: schema.categories.slug,
+        imageUrl: schema.categories.imageUrl
+      })
+      .from(schema.categories)
+      .where(eq(schema.categories.isActive, true))
+      .orderBy(asc(schema.categories.name));
+      
+      // Set cache headers for categories (cache for 1 hour, stale-while-revalidate for 1 day)
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+
+      return res.status(200).json({ 
+        success: true, 
+        data: categories 
+      });
+    }
+
+    // 2. Products Query (Search, Filter, Sort, Pagination)
     const { 
       slug, 
       type, 
@@ -80,7 +103,7 @@ export default async function handler(req, res) {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 12));
     const offset = (pageNum - 1) * limitNum;
 
-    // Query 1: Fetch Products
+    // Fetch Products
     let productsQuery = db.select({
       id: schema.products.id,
       name: schema.products.name,
@@ -169,7 +192,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error in /api/products:', error);
-    // Don't leak raw errors
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
