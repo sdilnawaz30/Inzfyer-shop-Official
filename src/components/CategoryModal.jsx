@@ -3,7 +3,7 @@ import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import axios from 'axios';
 
-const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
+const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit, showToast }) => {
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -18,7 +18,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
       setFormData({
         name: categoryToEdit.name || '',
         slug: categoryToEdit.slug || '',
-        is_active: categoryToEdit.is_active ?? true
+        is_active: categoryToEdit.is_active ?? categoryToEdit.isActive ?? true
       });
     } else {
       setFormData({
@@ -48,10 +48,13 @@ const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
     try {
       if (!formData.name.trim()) throw new Error("Category name is required.");
 
+      const generatedSlug = formData.slug.trim() || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
       const payload = {
-        name: formData.name,
-        slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-        is_active: formData.is_active
+        name: formData.name.trim(),
+        slug: generatedSlug,
+        is_active: formData.is_active,
+        isActive: formData.is_active
       };
 
       const token = (await supabase.auth.getSession()).data.session?.access_token;
@@ -59,7 +62,8 @@ const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
         action: 'saveCategory',
         payload: {
           id: categoryToEdit?.id || null,
-          category: payload
+          category: payload,
+          ...payload
         }
       }, { headers: { Authorization: `Bearer ${token}` } });
       
@@ -67,9 +71,14 @@ const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit }) => {
          throw new Error(res.data.message || "Failed to save category via backend.");
       }
 
-      onSave();
+      if (showToast) {
+        showToast(categoryToEdit ? "Category updated successfully!" : "Category created successfully!", "success");
+      }
+
+      onSave(res.data.category || { id: categoryToEdit?.id, ...payload });
     } catch (err) {
-      setError(err.message);
+      const errMsg = err.response?.data?.message || err.message || "An unexpected error occurred.";
+      setError(errMsg);
     } finally {
       setIsSaving(false);
     }

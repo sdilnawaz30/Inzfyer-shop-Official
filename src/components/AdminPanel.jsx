@@ -64,7 +64,11 @@ const AdminPanel = ({
       const data = dataResponse.data;
       if (!data.success) throw new Error("Failed to fetch admin data from backend.");
 
-      setCategories(data.categories || []);
+      setCategories((data.categories || []).map(c => ({
+        ...c,
+        is_active: c.is_active !== undefined ? c.is_active : (c.isActive !== undefined ? c.isActive : true),
+        isActive: c.isActive !== undefined ? c.isActive : (c.is_active !== undefined ? c.is_active : true)
+      })));
       
       // Transform products for the UI
       // Transform products for the UI
@@ -124,9 +128,9 @@ const AdminPanel = ({
       setProducts(prev => prev.filter(p => p.id !== product.id));
       try {
         // Find product images to delete from Storage (since backend only deletes from DB)
-        const product = products.find(p => p.id === product.id);
-        if (product && product.images && product.images.length > 0) {
-          const filesToDelete = product.images
+        const targetProduct = products.find(p => p.id === product.id) || product;
+        if (targetProduct && targetProduct.images && targetProduct.images.length > 0) {
+          const filesToDelete = targetProduct.images
             .map(img => {
               const match = img.image_url?.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
               return match ? match[1] : null;
@@ -165,20 +169,20 @@ const AdminPanel = ({
 
   const handleToggleCategoryActive = async (id, currentStatus) => {
     const newStatus = !currentStatus;
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: newStatus } : c));
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: newStatus, isActive: newStatus } : c));
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
       const res = await axios.post('/api/admin/action', {
         action: 'toggleCategoryActive',
-        payload: { id, isActive: newStatus }
+        payload: { id, isActive: newStatus, is_active: newStatus }
       }, { headers: { Authorization: `Bearer ${token}` } });
       
-      if (!res.data.success) throw new Error("Failed");
+      if (!res.data.success) throw new Error(res.data.message || "Failed");
       showToast(`Category ${newStatus ? 'enabled' : 'disabled'}`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Failed to update category status', 'error');
-      setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: currentStatus } : c));
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: currentStatus, isActive: currentStatus } : c));
     }
   };
 
@@ -702,11 +706,11 @@ const AdminPanel = ({
                         <td style={{ padding: '0.85rem', fontFamily: 'monospace', color: '#5C4347' }}>{c.slug}</td>
                         <td style={{ padding: '0.85rem' }}>
                           <button 
-                            onClick={() => handleToggleCategoryActive(c.id, c.is_active)}
-                            className={`badge ${c.is_active ? 'badge-success' : 'badge-warning'}`}
-                            style={{ cursor: 'pointer', border: 'none', background: c.is_active ? '#dcfce7' : '#fee2e2', color: c.is_active ? '#166534' : '#991b1b' }}
+                            onClick={() => handleToggleCategoryActive(c.id, c.is_active ?? c.isActive ?? true)}
+                            className={`badge ${(c.is_active ?? c.isActive ?? true) ? 'badge-success' : 'badge-warning'}`}
+                            style={{ cursor: 'pointer', border: 'none', background: (c.is_active ?? c.isActive ?? true) ? '#dcfce7' : '#fee2e2', color: (c.is_active ?? c.isActive ?? true) ? '#166534' : '#991b1b' }}
                           >
-                            {c.is_active ? 'Active' : 'Disabled'}
+                            {(c.is_active ?? c.isActive ?? true) ? 'Active' : 'Disabled'}
                           </button>
                         </td>
                         <td style={{ padding: '0.85rem', textAlign: 'right' }}>

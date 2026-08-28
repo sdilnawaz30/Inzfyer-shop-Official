@@ -66,54 +66,90 @@ export default async function handler(req, res) {
     // ==========================================
 
     if (action === 'saveCategory') {
-      const { id, name, slug, is_active } = payload;
-      
+      const cat = payload?.category || payload || {};
+      const id = payload?.id || cat?.id || null;
+      const name = cat?.name ? String(cat.name).trim() : '';
+      let slug = cat?.slug ? String(cat.slug).trim() : '';
+      if (!slug && name) {
+        slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      }
+      const isActive = cat?.is_active !== undefined ? Boolean(cat.is_active) : (cat?.isActive !== undefined ? Boolean(cat.isActive) : true);
+      const imageUrl = cat?.imageUrl || cat?.image_url || null;
+
+      if (!name) {
+        return res.status(400).json({ success: false, message: 'Category name is required.' });
+      }
+
+      if (!slug) {
+        slug = `category-${Date.now()}`;
+      }
+
       const categoryData = {
         name,
         slug,
-        isActive: is_active,
+        imageUrl,
+        isActive,
         updatedAt: new Date()
       };
 
+      let resultCategory = null;
+
       if (id) {
-        await db.update(schema.categories).set(categoryData).where(eq(schema.categories.id, id));
+        const [updated] = await db.update(schema.categories)
+          .set(categoryData)
+          .where(eq(schema.categories.id, id))
+          .returning();
+        resultCategory = updated;
       } else {
-        await db.insert(schema.categories).values({
+        const [inserted] = await db.insert(schema.categories).values({
           ...categoryData,
           createdAt: new Date()
-        });
+        }).returning();
+        resultCategory = inserted;
       }
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, category: resultCategory });
     } 
     
     else if (action === 'deleteCategory') {
-      await db.delete(schema.categories).where(eq(schema.categories.id, payload.id));
+      const categoryId = payload?.id || payload?.categoryId;
+      if (!categoryId) {
+        return res.status(400).json({ success: false, message: 'Category ID is required.' });
+      }
+      await db.delete(schema.categories).where(eq(schema.categories.id, categoryId));
       return res.status(200).json({ success: true });
     }
 
     else if (action === 'toggleCategoryActive') {
+      const categoryId = payload?.id || payload?.categoryId;
+      const isActive = payload?.isActive !== undefined ? payload.isActive : payload?.is_active;
+      if (!categoryId) {
+        return res.status(400).json({ success: false, message: 'Category ID is required.' });
+      }
       await db.update(schema.categories)
-        .set({ isActive: payload.isActive })
-        .where(eq(schema.categories.id, payload.id));
+        .set({ isActive: Boolean(isActive) })
+        .where(eq(schema.categories.id, categoryId));
       return res.status(200).json({ success: true });
     }
 
     else if (action === 'saveProduct') {
       const { id, product, newImages, existingImages, imgsToDeleteIds, stockDiff } = payload;
 
+      const rawCategoryId = product.category_id || product.categoryId;
+      const categoryId = (rawCategoryId && String(rawCategoryId).trim() !== '') ? String(rawCategoryId).trim() : null;
+
       const productData = {
         name: product.name,
         slug: product.slug,
         sku: product.sku,
         description: product.description,
-        categoryId: product.category_id,
+        categoryId: categoryId,
         price: product.price,
-        salePrice: product.sale_price,
-        gstRate: product.gst_rate,
-        stock: product.stock,
-        isActive: product.is_active,
-        featured: product.featured,
-        newArrival: product.new_arrival,
+        salePrice: (product.sale_price !== undefined && product.sale_price !== '' && product.sale_price !== null) ? product.sale_price : ((product.salePrice !== undefined && product.salePrice !== '' && product.salePrice !== null) ? product.salePrice : null),
+        gstRate: product.gst_rate || product.gstRate || '18.00',
+        stock: parseInt(product.stock, 10) || 0,
+        isActive: product.is_active !== undefined ? Boolean(product.is_active) : (product.isActive !== undefined ? Boolean(product.isActive) : true),
+        featured: Boolean(product.featured),
+        newArrival: product.new_arrival !== undefined ? Boolean(product.new_arrival) : (product.newArrival !== undefined ? Boolean(product.newArrival) : false),
         updatedAt: new Date()
       };
 
