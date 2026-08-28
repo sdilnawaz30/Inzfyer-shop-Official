@@ -134,18 +134,48 @@ export default async function handler(req, res) {
     else if (action === 'saveProduct') {
       const { id, product, newImages, existingImages, imgsToDeleteIds, stockDiff } = payload;
 
+      if (!product || typeof product !== 'object') {
+        return res.status(400).json({ success: false, message: 'Product data is required.' });
+      }
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const rawCategoryId = product.category_id || product.categoryId;
-      const categoryId = (rawCategoryId && String(rawCategoryId).trim() !== '') ? String(rawCategoryId).trim() : null;
+      const categoryId = (rawCategoryId && uuidRegex.test(String(rawCategoryId).trim())) ? String(rawCategoryId).trim() : null;
+
+      const productName = String(product.name || '').trim();
+      let productSlug = String(product.slug || '').trim();
+      let productSku = String(product.sku || '').trim();
+
+      if (!productName) {
+        return res.status(400).json({ success: false, message: 'Product name is required.' });
+      }
+
+      if (!productSlug) {
+        productSlug = productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+      }
+
+      if (!productSku) {
+        productSku = `INZ-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      const price = product.price !== undefined && product.price !== '' ? String(product.price) : '0.00';
+      const salePrice = (product.sale_price !== undefined && product.sale_price !== '' && product.sale_price !== null) 
+        ? String(product.sale_price) 
+        : ((product.salePrice !== undefined && product.salePrice !== '' && product.salePrice !== null) ? String(product.salePrice) : null);
+      
+      const gstRate = (product.gst_rate !== undefined && product.gst_rate !== '' && product.gst_rate !== null) 
+        ? String(product.gst_rate) 
+        : ((product.gstRate !== undefined && product.gstRate !== '' && product.gstRate !== null) ? String(product.gstRate) : '18.00');
 
       const productData = {
-        name: product.name,
-        slug: product.slug,
-        sku: product.sku,
-        description: product.description,
+        name: productName,
+        slug: productSlug,
+        sku: productSku,
+        description: product.description || '',
         categoryId: categoryId,
-        price: product.price,
-        salePrice: (product.sale_price !== undefined && product.sale_price !== '' && product.sale_price !== null) ? product.sale_price : ((product.salePrice !== undefined && product.salePrice !== '' && product.salePrice !== null) ? product.salePrice : null),
-        gstRate: product.gst_rate || product.gstRate || '18.00',
+        price: price,
+        salePrice: salePrice,
+        gstRate: gstRate,
         stock: parseInt(product.stock, 10) || 0,
         isActive: product.is_active !== undefined ? Boolean(product.is_active) : (product.isActive !== undefined ? Boolean(product.isActive) : true),
         featured: Boolean(product.featured),
@@ -153,7 +183,7 @@ export default async function handler(req, res) {
         updatedAt: new Date()
       };
 
-      let productId = id;
+      let productId = id && uuidRegex.test(String(id).trim()) ? String(id).trim() : null;
 
       await db.transaction(async (tx) => {
         // 1. Upsert Product
@@ -168,40 +198,57 @@ export default async function handler(req, res) {
         }
 
         // 2. Inventory movement
-        if (stockDiff !== 0) {
-          await tx.insert(schema.inventoryMovements).values({
-            productId: productId,
-            movementType: id ? 'MANUAL_ADJUSTMENT' : 'RESTOCK',
-            quantity: stockDiff,
-            notes: 'Admin updated catalog',
-            createdAt: new Date()
-          });
+        if (stockDiff !== undefined && Number(stockDiff) !== 0) {
+          try {
+            await tx.insert(schema.inventoryMovements).values({
+              productId: productId,
+              movementType: id ? 'MANUAL_ADJUSTMENT' : 'RESTOCK',
+              quantity: Number(stockDiff) || 0,
+              notes: 'Admin updated catalog',
+              createdAt: new Date()
+            });
+          } catch (invErr) {
+            console.warn("Inventory movement logging skipped:", invErr.message);
+          }
         }
 
         // 3. Delete removed images from DB
-        if (imgsToDeleteIds && imgsToDeleteIds.length > 0) {
-          await tx.delete(schema.productImages).where(inArray(schema.productImages.id, imgsToDeleteIds));
+        if (imgsToDeleteIds && Array.isArray(imgsToDeleteIds) && imgsToDeleteIds.length > 0) {
+          const validImgIds = imgsToDeleteIds.filter(imgId => uuidRegex.test(String(imgId)));
+          if (validImgIds.length > 0) {
+            await tx.delete(schema.productImages).where(inArray(schema.productImages.id, validImgIds));
+          }
         }
 
         // 4. Update existing images (sort_order, is_primary)
-        if (existingImages && existingImages.length > 0) {
+        if (existingImages && Array.isArray(existingImages) && existingImages.length > 0) {
           for (const img of existingImages) {
-            await tx.update(schema.productImages)
-              .set({ sortOrder: img.sort_order, isPrimary: img.is_primary })
-              .where(eq(schema.productImages.id, img.id));
+            if (img.id && uuidRegex.test(String(img.id))) {
+              await tx.update(schema.productImages)
+                .set({ 
+                  sortOrder: Number(img.sort_order ?? img.sortOrder) || 0, 
+                  isPrimary: Boolean(img.is_primary ?? img.isPrimary) 
+                })
+                .where(eq(schema.productImages.id, img.id));
+            }
           }
         }
 
         // 5. Insert new images
-        if (newImages && newImages.length > 0) {
-          const imagesToInsert = newImages.map(img => ({
-            productId: productId,
-            imageUrl: img.image_url,
-            sortOrder: img.sort_order,
-            isPrimary: img.is_primary,
-            createdAt: new Date()
-          }));
-          await tx.insert(schema.productImages).values(imagesToInsert);
+        if (newImages && Array.isArray(newImages) && newImages.length > 0) {
+          const imagesToInsert = newImages
+            .map((img, idx) => ({
+              productId: productId,
+              imageUrl: String(img.image_url || img.imageUrl || '').trim(),
+              sortOrder: (img.sort_order !== undefined || img.sortOrder !== undefined) ? Number(img.sort_order ?? img.sortOrder) : idx,
+              isPrimary: (img.is_primary !== undefined || img.isPrimary !== undefined) ? Boolean(img.is_primary ?? img.isPrimary) : (idx === 0),
+              createdAt: new Date()
+            }))
+            .filter(img => Boolean(img.imageUrl));
+
+          if (imagesToInsert.length > 0) {
+            await tx.insert(schema.productImages).values(imagesToInsert);
+          }
         }
       });
 
@@ -209,21 +256,37 @@ export default async function handler(req, res) {
     }
 
     else if (action === 'deleteProduct') {
-      await db.delete(schema.products).where(eq(schema.products.id, payload.id));
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const productId = payload?.id || payload?.productId;
+      if (!productId || !uuidRegex.test(String(productId))) {
+        return res.status(400).json({ success: false, message: 'Valid Product ID is required.' });
+      }
+      await db.delete(schema.products).where(eq(schema.products.id, productId));
       return res.status(200).json({ success: true });
     }
 
     else if (action === 'toggleProductActive') {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const productId = payload?.id || payload?.productId;
+      const isActive = payload?.isActive !== undefined ? payload.isActive : payload?.is_active;
+      if (!productId || !uuidRegex.test(String(productId))) {
+        return res.status(400).json({ success: false, message: 'Valid Product ID is required.' });
+      }
       await db.update(schema.products)
-        .set({ isActive: payload.isActive })
-        .where(eq(schema.products.id, payload.id));
+        .set({ isActive: Boolean(isActive) })
+        .where(eq(schema.products.id, productId));
       return res.status(200).json({ success: true });
     }
 
     else if (action === 'updateStock') {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const productId = payload?.id || payload?.productId;
+      if (!productId || !uuidRegex.test(String(productId))) {
+        return res.status(400).json({ success: false, message: 'Valid Product ID is required.' });
+      }
       await db.update(schema.products)
-        .set({ stock: payload.stock })
-        .where(eq(schema.products.id, payload.id));
+        .set({ stock: parseInt(payload.stock, 10) || 0 })
+        .where(eq(schema.products.id, productId));
       return res.status(200).json({ success: true });
     }
     
@@ -237,11 +300,12 @@ export default async function handler(req, res) {
       const { sku, slug, excludeProductId } = payload;
       let skuAvailable = true;
       let slugAvailable = true;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
       if (sku) {
         let conditions = [eq(schema.products.sku, String(sku).trim())];
-        if (excludeProductId) {
-          conditions.push(ne(schema.products.id, String(excludeProductId)));
+        if (excludeProductId && uuidRegex.test(String(excludeProductId).trim())) {
+          conditions.push(ne(schema.products.id, String(excludeProductId).trim()));
         }
         const existingSku = await db.select({ id: schema.products.id }).from(schema.products).where(and(...conditions)).limit(1);
         if (existingSku.length > 0) skuAvailable = false;
@@ -249,8 +313,8 @@ export default async function handler(req, res) {
 
       if (slug) {
         let conditions = [eq(schema.products.slug, String(slug).trim())];
-        if (excludeProductId) {
-          conditions.push(ne(schema.products.id, String(excludeProductId)));
+        if (excludeProductId && uuidRegex.test(String(excludeProductId).trim())) {
+          conditions.push(ne(schema.products.id, String(excludeProductId).trim()));
         }
         const existingSlug = await db.select({ id: schema.products.id }).from(schema.products).where(and(...conditions)).limit(1);
         if (existingSlug.length > 0) slugAvailable = false;
@@ -300,14 +364,18 @@ export default async function handler(req, res) {
                 .where(eq(schema.products.id, item.productId));
             }
 
-            const inventoryMovementsToInsert = items.map(item => ({
-              productId: item.productId,
-              movementType: newStatus.toUpperCase(),
-              quantity: item.quantity,
-              referenceId: existingOrder.orderNumber,
-              notes: `Order ${newStatus} by Admin`
-            }));
-            await tx.insert(schema.inventoryMovements).values(inventoryMovementsToInsert);
+            try {
+              const inventoryMovementsToInsert = items.map(item => ({
+                productId: item.productId,
+                movementType: newStatus.toUpperCase(),
+                quantity: item.quantity,
+                referenceId: existingOrder.orderNumber,
+                notes: `Order ${newStatus} by Admin`
+              }));
+              await tx.insert(schema.inventoryMovements).values(inventoryMovementsToInsert);
+            } catch (invErr) {
+              console.warn("Stock restoration movement logging skipped:", invErr.message);
+            }
           }
         }
         
@@ -331,7 +399,17 @@ export default async function handler(req, res) {
     
     // Provide specific error messages for unique constraint violations
     if (error.code === '23505' || error.message?.includes('duplicate key value')) {
-        return res.status(400).json({ success: false, message: 'A record with this unique identifier (like SKU or Slug) already exists.' });
+      return res.status(400).json({ success: false, message: 'A record with this unique identifier (like SKU or Slug) already exists.' });
+    }
+
+    // Foreign key violation
+    if (error.code === '23503' || error.message?.includes('violates foreign key constraint')) {
+      return res.status(400).json({ success: false, message: 'Referenced record (such as Category) does not exist in database.' });
+    }
+
+    // Invalid UUID or data type syntax
+    if (error.code === '22P02' || error.message?.includes('invalid input syntax for type uuid')) {
+      return res.status(400).json({ success: false, message: 'Invalid identifier format provided.' });
     }
     
     return res.status(500).json({ success: false, message: 'Action failed: ' + error.message });

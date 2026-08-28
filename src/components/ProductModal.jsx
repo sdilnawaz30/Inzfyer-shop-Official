@@ -248,16 +248,17 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
         }
 
         // 5. Upsert Product details
+        const parsedGst = parseFloat(formData.gst_rate);
         const productPayload = {
           name: formData.name.trim(),
           slug: finalSlug,
           sku: formData.sku.trim(),
-          description: formData.description,
+          description: formData.description || '',
           category_id: formData.category_id || null,
           price,
           sale_price,
-          gst_rate: parseFloat(formData.gst_rate) || 18.00,
-          stock: parseInt(formData.stock),
+          gst_rate: !isNaN(parsedGst) ? parsedGst : 18.00,
+          stock: parseInt(formData.stock, 10) || 0,
           is_active: formData.is_active,
           featured: formData.featured,
           new_arrival: formData.new_arrival
@@ -269,14 +270,15 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
         // Prepare arrays for backend processing
         let imgsToDelete = [];
         if (productToEdit) {
-           const existingImgUrls = productToEdit.images?.map(img => img.image_url) || [];
+           const existingImgUrls = productToEdit.images?.map(img => img.image_url || img.imageUrl) || [];
            const newImgUrls = finalImages.map(img => img.url);
-           imgsToDelete = (productToEdit.images || []).filter(img => !newImgUrls.includes(img.image_url));
+           imgsToDelete = (productToEdit.images || []).filter(img => !newImgUrls.includes(img.image_url || img.imageUrl));
            
            // Cleanup storage directly from frontend for deleted images since it relies on anon key
            const filesToDelete = imgsToDelete
             .map(img => {
-              const match = img.image_url.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
+              const url = img.image_url || img.imageUrl;
+              const match = url?.match(/\/storage\/v1\/object\/public\/product-images\/(.+)$/);
               return match ? match[1] : null;
             })
             .filter(Boolean);
@@ -313,7 +315,16 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
 
         onSave({
           id: productId,
-          ...productPayload
+          ...productPayload,
+          images: finalImages.map((img, idx) => ({
+            id: img.id || `temp-${idx}`,
+            imageUrl: img.url,
+            image_url: img.url,
+            isPrimary: img.is_primary,
+            is_primary: img.is_primary,
+            sortOrder: idx,
+            sort_order: idx
+          }))
         });
         
       } catch (dbErr) {
@@ -326,8 +337,10 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
       }
     } catch (err) {
       console.error("Product Save Error:", err);
-      // Give more user-friendly messages for null id issues
-      if (err.message && err.message.includes('violates not-null constraint') && err.message.includes('id')) {
+      const serverMsg = err.response?.data?.message;
+      if (serverMsg) {
+        setError(serverMsg);
+      } else if (err.message && err.message.includes('violates not-null constraint') && err.message.includes('id')) {
         setError(`Database configuration error: Missing DEFAULT gen_random_uuid() on the table's ID column. ${err.message}`);
       } else {
         setError(err.message || "An unknown error occurred while saving the product.");
