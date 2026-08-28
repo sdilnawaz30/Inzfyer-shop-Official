@@ -45,8 +45,8 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      const response = await axios.post('/api/admin/update-order-status', 
-        { orderId: order.order_number, newStatus },
+      const response = await axios.post('/api/admin/action', 
+        { action: 'updateOrderStatus', payload: { orderId: order.order_number, newStatus } },
         { headers: { Authorization: `Bearer ${session?.access_token}` } }
       );
       

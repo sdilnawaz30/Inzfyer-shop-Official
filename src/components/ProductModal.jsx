@@ -184,7 +184,10 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
           excludeProductId: productId
         };
 
-        const res = await axios.post('/api/admin/products/validate', validatePayload, config);
+        const res = await axios.post('/api/admin/action', {
+          action: 'validateSkuSlug',
+          payload: validatePayload
+        }, config);
         
         if (slugCounter === 0 && !res.data.skuAvailable) {
           throw new Error(`A product with SKU '${formData.sku}' already exists.`);
