@@ -327,6 +327,23 @@ export default async function handler(req, res) {
       });
     }
 
+    else if (action === 'validateCategorySlug') {
+      const { slug, excludeCategoryId } = payload;
+      let slugAvailable = true;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+      if (slug) {
+        let conditions = [eq(schema.categories.slug, String(slug).trim())];
+        if (excludeCategoryId && uuidRegex.test(String(excludeCategoryId).trim())) {
+          conditions.push(ne(schema.categories.id, String(excludeCategoryId).trim()));
+        }
+        const existingSlug = await db.select({ id: schema.categories.id }).from(schema.categories).where(and(...conditions)).limit(1);
+        if (existingSlug.length > 0) slugAvailable = false;
+      }
+
+      return res.status(200).json({ success: true, slugAvailable });
+    }
+
     // Consolidated: Update Order Status with Stock Restoration & Notification Enqueuing
     else if (action === 'updateOrderStatus') {
       const parsed = updateStatusSchema.safeParse(payload);
@@ -405,6 +422,11 @@ export default async function handler(req, res) {
     // Foreign key violation
     if (error.code === '23503' || error.message?.includes('violates foreign key constraint')) {
       return res.status(400).json({ success: false, message: 'Referenced record (such as Category) does not exist in database.' });
+    }
+
+    // Not null violation
+    if (error.code === '23502' || error.message?.includes('null value in column')) {
+      return res.status(400).json({ success: false, message: 'A required field is missing.' });
     }
 
     // Invalid UUID or data type syntax

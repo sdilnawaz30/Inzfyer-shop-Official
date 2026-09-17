@@ -215,8 +215,8 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
             const { fullBlob, thumbBlob } = await processImageForUpload(file);
             
             const baseFileName = `${formData.sku}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-            const fullFileName = `${baseFileName}.webp`;
-            const thumbFileName = `${baseFileName}-thumb.webp`;
+            const fullFileName = `products/${baseFileName}.webp`;
+            const thumbFileName = `products/${baseFileName}-thumb.webp`;
             
             // Upload Full Size Image
             const { error: fullUploadError } = await supabase.storage
@@ -225,10 +225,10 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
 
             if (fullUploadError) {
               if (fullUploadError.message.includes('Bucket not found')) {
-                throw new Error("Storage Bucket 'product-images' not found. Please create a public bucket named 'product-images' in your Supabase dashboard.");
+                throw new Error("Image storage is currently unavailable.");
               }
-              if (fullUploadError.message.includes('row-level security') || fullUploadError.message.includes('row level security')) {
-                throw new Error("You don't have permission to upload images. Please check the 'product-images' bucket RLS policies.");
+              if (fullUploadError.message.includes('row-level security') || fullUploadError.message.includes('row level security') || fullUploadError.message.includes('violates row-level security')) {
+                throw new Error("You don't have permission to upload this image.");
               }
               throw new Error(`Failed to upload full image: ${fullUploadError.message}`);
             }

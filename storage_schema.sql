@@ -30,8 +30,8 @@ ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'product-images'
   AND public.is_admin()
-  -- Force structure to be inside the products folder (e.g. products/uuid/image.webp)
-  AND (storage.foldername(name))[1] = 'products'
+  -- Force structure to be inside the products or categories folder (e.g. products/uuid/image.webp)
+  AND (storage.foldername(name))[1] IN ('products', 'categories')
 );
 
 -- Allow authenticated admins to UPDATE (replace images)
