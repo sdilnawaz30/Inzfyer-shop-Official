@@ -244,7 +244,7 @@ export default async function handler(req, res) {
               isPrimary: (img.is_primary !== undefined || img.isPrimary !== undefined) ? Boolean(img.is_primary ?? img.isPrimary) : (idx === 0),
               createdAt: new Date()
             }))
-            .filter(img => Boolean(img.imageUrl));
+            .filter(img => Boolean(img.imageUrl) && img.imageUrl !== 'undefined' && img.imageUrl !== 'null');
 
           if (imagesToInsert.length > 0) {
             await tx.insert(schema.productImages).values(imagesToInsert);

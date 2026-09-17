@@ -43,9 +43,9 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
       
       if (productToEdit.images) {
         setImages(productToEdit.images.map((img) => ({
-          url: img.image_url,
-          is_primary: img.is_primary,
-          sort_order: img.sort_order,
+          url: img.image_url || img.imageUrl || '',
+          is_primary: img.is_primary !== undefined ? img.is_primary : (img.isPrimary || false),
+          sort_order: img.sort_order !== undefined ? img.sort_order : (img.sortOrder || 0),
           id: img.id
         })).sort((a, b) => a.sort_order - b.sort_order));
       } else {
@@ -394,7 +394,11 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
                 <div key={idx} style={{
                   width: '120px', height: '140px', position: 'relative', border: img.is_primary ? '2px solid #A63A4B' : '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', background: '#f9fafb'
                 }}>
-                  <img src={img.url} alt="preview" style={{ width: '100%', height: '90px', objectFit: 'cover' }} />
+                  {img.url ? (
+                    <img src={img.url} alt="preview" style={{ width: '100%', height: '90px', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb', color: '#6b7280', fontSize: '0.75rem' }}>No Preview</div>
+                  )}
                   {img.is_primary && (
                     <div style={{ position: 'absolute', top: '4px', left: '4px', background: '#A63A4B', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Primary</div>
                   )}
