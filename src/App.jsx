@@ -220,7 +220,7 @@ function App() {
       />
 
       {/* Main Content Area */}
-      <main style={{ flexGrow: 1, maxWidth: '1300px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem' }} className="app-content">
+      <main style={{ flexGrow: 1, maxWidth: '1300px', width: '100%', margin: '0 auto' }} className="app-content">
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Loader2 className="spin" size={32} color="#db2777" /></div>}>
           {selectedProductForDetail ? (
             <ProductDetailPage 

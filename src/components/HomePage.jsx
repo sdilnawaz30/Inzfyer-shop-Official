@@ -62,27 +62,6 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
         </div>
       </section>
 
-      <section className="why-choose-section">
-        <div className="section-heading"><span>Our Promise</span><h2>Why Choose <i>INZFYER</i></h2><p>Crafted to bring a little more magic to your day.</p></div>
-        <div className="why-choose-grid">
-          <div className="why-choose-card">
-            <span className="why-choose-icon"><Heart size={28} /></span>
-            <h3>Handmade with Care</h3>
-            <p>Every piece is carefully crafted with love and attention to detail.</p>
-          </div>
-          <div className="why-choose-card">
-            <span className="why-choose-icon"><Gift size={28} /></span>
-            <h3>Affordable Cute Gifts</h3>
-            <p>Spread joy and good vibes without breaking the bank.</p>
-          </div>
-          <div className="why-choose-card">
-            <span className="why-choose-icon"><Sparkles size={28} /></span>
-            <h3>Unique & Aesthetic</h3>
-            <p>Stand out with our specially curated, aesthetic designs.</p>
-          </div>
-        </div>
-      </section>
-
       <section className="store-section">
         <div className="section-heading"><span>Handpicked collections</span><h2>Find a little <i>magic</i></h2><p>Thoughtful picks for every tiny celebration.</p></div>
         <div className="category-grid">
@@ -117,7 +96,7 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
                   <button className={`wishlist-btn ${inWishlist ? 'active' : ''}`} onClick={() => onToggleWishlist(product)} aria-label={`Save ${product.name}`}><Heart size={18} fill={inWishlist ? 'currentColor' : 'none'} /></button>
                   <ResponsiveImage src={product.image} alt={product.name} className="product-image" onClick={() => onSelectProduct(product)} />
                 </div>
-                <div className="product-copy"><small>{product.category}</small><h3 onClick={() => onSelectProduct(product)}>{product.name}</h3><div className="product-rating"><Star size={14} fill="currentColor" /> {product.rating} <span>({product.reviewsCount})</span></div><div className="product-bottom"><div><b>₹{product.price.toLocaleString('en-IN')}</b>{product.originalPrice && <del>₹{product.originalPrice.toLocaleString('en-IN')}</del>}</div><button onClick={() => onAddToCart(product)} aria-label={`Add ${product.name} to cart`}><ShoppingBag size={17} /></button></div></div>
+                <div className="product-copy"><small>{product.category}</small><h3 onClick={() => onSelectProduct(product)}>{product.name}</h3><div className="product-rating"><Star size={14} fill="currentColor" /> {product.rating} <span>({product.reviewsCount})</span></div><div className="product-bottom product-card-footer"><div><b>₹{product.price.toLocaleString('en-IN')}</b>{product.originalPrice && <del>₹{product.originalPrice.toLocaleString('en-IN')}</del>}</div><button onClick={() => onAddToCart(product)} aria-label={`Add ${product.name} to cart`}><ShoppingBag size={17} /></button></div></div>
               </article>;
             })
           ) : (
@@ -125,6 +104,27 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
               No featured products found.
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="why-choose-section">
+        <div className="section-heading"><span>Our Promise</span><h2>Why Choose <i>INZFYER</i></h2><p>Crafted to bring a little more magic to your day.</p></div>
+        <div className="why-choose-grid">
+          <div className="why-choose-card">
+            <span className="why-choose-icon"><Heart size={28} /></span>
+            <h3>Handmade with Care</h3>
+            <p>Every piece is carefully crafted with love and attention to detail.</p>
+          </div>
+          <div className="why-choose-card">
+            <span className="why-choose-icon"><Gift size={28} /></span>
+            <h3>Affordable Cute Gifts</h3>
+            <p>Spread joy and good vibes without breaking the bank.</p>
+          </div>
+          <div className="why-choose-card">
+            <span className="why-choose-icon"><Sparkles size={28} /></span>
+            <h3>Unique & Aesthetic</h3>
+            <p>Stand out with our specially curated, aesthetic designs.</p>
+          </div>
         </div>
       </section>
 
@@ -138,32 +138,6 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
         <p style={{ color: '#5C4347', lineHeight: '1.8', fontSize: '1.05rem', margin: '0 auto', textAlign: 'justify', textAlignLast: 'center' }}>
           Looking for the perfect way to spread joy? At INZFYER, we specialize in curating the most adorable and unique <strong>handmade gifts</strong> available online in India. From our incredibly soft, high-quality plushies to our aesthetic charm collections and beautifully crafted ceramics, every item is thoughtfully designed to bring a smile to your loved ones' faces. We believe that gifting shouldn't be expensive, which is why we offer a wide range of <strong>affordable cute products</strong> that never compromise on quality or charm. Whether you're planning a magical birthday surprise, an anniversary treat, or just a little something to make someone's day, our products are absolutely <strong>perfect for gifting</strong>. Best of all, we provide fast, secure <strong>delivery across India</strong> right to your doorstep, making your gift-giving experience completely hassle-free. Shop with INZFYER today and add a little magic to your everyday moments.
         </p>
-      </section>
-
-      <section className="instagram-preview">
-        <div className="section-heading">
-          <span>Instagram</span>
-          <h2>Follow us for more <i>cute vibes</i> ✨</h2>
-          <a href="https://www.instagram.com/inzfyer_official" target="_blank" rel="noopener noreferrer" className="text-link" style={{ justifyContent: 'center', marginTop: '10px' }}>
-            @inzfyer_official <ArrowRight size={18} />
-          </a>
-        </div>
-        <div className="instagram-grid">
-          {isLoading ? (
-            Array(4).fill(0).map((_, i) => (
-              <div key={i} className="instagram-card skeleton-card" style={{ height: '280px', background: '#f9fafb', borderRadius: '15px' }}></div>
-            ))
-          ) : (
-            recentProducts.map((product, idx) => (
-              <a key={idx} href="https://www.instagram.com/inzfyer_official" target="_blank" rel="noopener noreferrer" className="instagram-card">
-                <ResponsiveImage src={product.image} alt="Instagram Preview" />
-                <div className="instagram-overlay">
-                  <Camera size={32} />
-                </div>
-              </a>
-            ))
-          )}
-        </div>
       </section>
     </div>
   );

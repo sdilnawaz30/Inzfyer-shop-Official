@@ -71,6 +71,17 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
     setError(null);
   }, [productToEdit, isOpen, categories]);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -343,10 +354,13 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
       const serverMsg = err.response?.data?.message;
       if (serverMsg) {
         setError(serverMsg);
-      } else if (err.message && err.message.includes('violates not-null constraint') && err.message.includes('id')) {
-        setError(`Database configuration error: Missing DEFAULT gen_random_uuid() on the table's ID column. ${err.message}`);
       } else {
-        setError(err.message || "An unknown error occurred while saving the product.");
+        const fallbackMsg = err.message || "";
+        if (fallbackMsg.toLowerCase().includes('failed query') || fallbackMsg.toLowerCase().includes('insert into') || fallbackMsg.includes('violates')) {
+          setError("Unable to save product. Please try again.");
+        } else {
+          setError(fallbackMsg || "An unknown error occurred while saving the product.");
+        }
       }
     } finally {
       setIsSaving(false);
@@ -358,149 +372,161 @@ const ProductModal = ({ isOpen, onClose, onSave, productToEdit, categories = [],
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
     }}>
       <div 
-        className="modal-card animate-fade-in" 
+        className="modal-card animate-fade-in product-modal-card" 
         onClick={(e) => e.stopPropagation()} 
-        style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', background: '#fff', borderRadius: '24px' }}
+        style={{ background: '#fff', borderRadius: '24px' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #F8D7D0', paddingBottom: '0.85rem' }}>
-          <div>
-            <span className="badge badge-pink" style={{ marginBottom: '0.2rem' }}>
-              <Sparkles size={12} /> Catalog Manager
-            </span>
-            <h2 className="brand-font" style={{ fontSize: '1.8rem', color: '#2C181B' }}>
-              {productToEdit ? 'Edit Product Details' : 'Add New Boutique Product'}
-            </h2>
+        <div className="product-modal-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span className="badge badge-pink" style={{ marginBottom: '0.2rem' }}>
+                <Sparkles size={12} /> Catalog Manager
+              </span>
+              <h2 className="brand-font" style={{ fontSize: '1.8rem', color: '#2C181B', margin: 0 }}>
+                {productToEdit ? 'Edit Product Details' : 'Add New Boutique Product'}
+              </h2>
+            </div>
+            <button className="wishlist-btn" type="button" onClick={onClose} style={{ position: 'static' }}>
+              <X size={20} />
+            </button>
           </div>
-          <button className="wishlist-btn" onClick={onClose} style={{ position: 'static' }}>
-            <X size={20} />
-          </button>
+
+          {error && (
+            <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '12px', marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <AlertCircle size={18} />
+              {error}
+            </div>
+          )}
         </div>
 
-        {error && (
-          <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertCircle size={18} />
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          {/* Images Section */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem', color: '#2C181B' }}>
-              Product Images (WebP preferred)
-            </label>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              {images.map((img, idx) => (
-                <div key={idx} style={{
-                  width: '120px', height: '140px', position: 'relative', border: img.is_primary ? '2px solid #A63A4B' : '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', background: '#f9fafb'
-                }}>
-                  {img.url ? (
-                    <img src={img.url} alt="preview" style={{ width: '100%', height: '90px', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb', color: '#6b7280', fontSize: '0.75rem' }}>No Preview</div>
-                  )}
-                  {img.is_primary && (
-                    <div style={{ position: 'absolute', top: '4px', left: '4px', background: '#A63A4B', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Primary</div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', alignItems: 'center', background: '#fff', height: '46px' }}>
-                    <div style={{ display: 'flex', gap: '2px' }}>
-                      <button type="button" onClick={() => moveImage(idx, 'up')} disabled={idx === 0} style={{ border: 'none', background: 'transparent', cursor: idx === 0 ? 'not-allowed' : 'pointer', color: '#5C4347' }}><ArrowUp size={14} /></button>
-                      <button type="button" onClick={() => moveImage(idx, 'down')} disabled={idx === images.length - 1} style={{ border: 'none', background: 'transparent', cursor: idx === images.length - 1 ? 'not-allowed' : 'pointer', color: '#5C4347' }}><ArrowDown size={14} /></button>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflow: 'hidden' }}>
+          <div className="product-modal-content">
+            <div className="product-modal-grid">
+              
+              {/* LEFT COLUMN: Images Section */}
+              <div>
+                <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem', color: '#2C181B' }}>
+                  Product Images (WebP preferred)
+                </label>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  {images.map((img, idx) => (
+                    <div key={idx} style={{
+                      width: '120px', height: '140px', position: 'relative', border: img.is_primary ? '2px solid #A63A4B' : '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', background: '#f9fafb'
+                    }}>
+                      {(img.url || img.preview) ? (
+                        <img src={img.url || img.preview} alt="preview" style={{ width: '100%', height: '90px', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e5e7eb', color: '#6b7280', fontSize: '0.75rem' }}>No Preview</div>
+                      )}
+                      {img.is_primary && (
+                        <div style={{ position: 'absolute', top: '4px', left: '4px', background: '#A63A4B', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Primary</div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', alignItems: 'center', background: '#fff', height: '46px' }}>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          <button type="button" onClick={() => moveImage(idx, 'up')} disabled={idx === 0} style={{ border: 'none', background: 'transparent', cursor: idx === 0 ? 'not-allowed' : 'pointer', color: '#5C4347' }}><ArrowUp size={14} /></button>
+                          <button type="button" onClick={() => moveImage(idx, 'down')} disabled={idx === images.length - 1} style={{ border: 'none', background: 'transparent', cursor: idx === images.length - 1 ? 'not-allowed' : 'pointer', color: '#5C4347' }}><ArrowDown size={14} /></button>
+                        </div>
+                        <button type="button" onClick={() => removeImage(idx)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={14} /></button>
+                      </div>
+                      {!img.is_primary && (
+                        <button type="button" onClick={() => setPrimaryImage(idx)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(255,255,255,0.9)', border: 'none', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>Set Primary</button>
+                      )}
                     </div>
-                    <button type="button" onClick={() => removeImage(idx)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444' }}><Trash2 size={14} /></button>
-                  </div>
-                  {!img.is_primary && (
-                    <button type="button" onClick={() => setPrimaryImage(idx)} style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(255,255,255,0.8)', border: 'none', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}>Set Primary</button>
-                  )}
+                  ))}
+
+                  <label style={{
+                    width: '120px', height: '120px', borderRadius: '12px', border: '2px dashed #d1d5db', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#f9fafb', color: '#6b7280'
+                  }}>
+                    <Upload size={24} style={{ marginBottom: '0.5rem' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Add Image</span>
+                    <input type="file" multiple accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+                  </label>
                 </div>
-              ))}
-
-              <label style={{
-                width: '120px', height: '120px', borderRadius: '12px', border: '2px dashed #d1d5db', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#f9fafb', color: '#6b7280'
-              }}>
-                <Upload size={24} style={{ marginBottom: '0.5rem' }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>Add Image</span>
-                <input type="file" multiple accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
-              </label>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Product Name *</label>
-              <input required name="name" type="text" placeholder="e.g. Cream Ribbon Bunny Plushie" value={formData.name} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
-            </div>
-            <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>SKU Code *</label>
-              <input required name="sku" type="text" placeholder="INZ-PLUSH-001" value={formData.sku} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', color: '#2C181B', margin: 0 }}>Category</label>
-                {onAddNewCategory && (
-                  <button type="button" onClick={onAddNewCategory} style={{ background: 'none', border: 'none', color: '#be185d', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
-                    + New Category
-                  </button>
-                )}
               </div>
-              <select name="category_id" value={formData.category_id} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff' }}>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-                {categories.length === 0 && <option value="">No categories available</option>}
-              </select>
-            </div>
-            <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Stock Units *</label>
-              <input required name="stock" type="number" min="0" value={formData.stock} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+
+              {/* RIGHT COLUMN: Details Section */}
+              <div>
+                <div className="pm-field-grid pm-field-grid-2">
+                  <div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Product Name *</label>
+                    <input required name="name" type="text" placeholder="e.g. Cream Ribbon Bunny Plushie" value={formData.name} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>SKU Code *</label>
+                    <input required name="sku" type="text" placeholder="INZ-PLUSH-001" value={formData.sku} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                </div>
+
+                <div className="pm-field-grid pm-field-grid-2">
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: '0.85rem', color: '#2C181B', margin: 0 }}>Category</label>
+                      {onAddNewCategory && (
+                        <button type="button" onClick={onAddNewCategory} style={{ background: 'none', border: 'none', color: '#be185d', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                          + New Category
+                        </button>
+                      )}
+                    </div>
+                    <select name="category_id" value={formData.category_id} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff' }}>
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                      {categories.length === 0 && <option value="">No categories available</option>}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Stock Units *</label>
+                    <input required name="stock" type="number" min="0" value={formData.stock} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                </div>
+
+                <div className="pm-field-grid pm-field-grid-3">
+                  <div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Final Price *</label>
+                    <input required name="price" type="number" step="0.01" min="0" placeholder="1899" value={formData.price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Discount Price</label>
+                    <input name="sale_price" type="number" step="0.01" min="0" placeholder="Optional" value={formData.sale_price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>GST Rate (%) *</label>
+                    <select required name="gst_rate" value={formData.gst_rate} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff' }}>
+                      <option value="0">0%</option>
+                      <option value="5">5%</option>
+                      <option value="12">12%</option>
+                      <option value="18">18%</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Product Description</label>
+                  <textarea rows="4" name="description" placeholder="Enter product description, materials, and gift care details..." value={formData.description} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb', resize: 'vertical' }} />
+                </div>
+
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
+                    <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} /> Product is Active
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
+                    <input type="checkbox" name="featured" checked={formData.featured} onChange={handleChange} /> Featured Item
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
+                    <input type="checkbox" name="new_arrival" checked={formData.new_arrival} onChange={handleChange} /> New Arrival Tag
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Final Price (Inc. GST) *</label>
-              <input required name="price" type="number" step="0.01" min="0" placeholder="1899" value={formData.price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
+          <div className="product-modal-footer">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.85rem' }}>
+              <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isSaving}>Cancel</button>
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem 1.8rem' }} disabled={isSaving}>
+                {isSaving ? 'Saving...' : (productToEdit ? 'Save Changes' : 'Publish Product')}
+              </button>
             </div>
-            <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Discount Price (Inc. GST)</label>
-              <input name="sale_price" type="number" step="0.01" min="0" placeholder="Optional" value={formData.sale_price} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
-            </div>
-            <div>
-              <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>GST Rate (%) *</label>
-              <select required name="gst_rate" value={formData.gst_rate} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb', background: '#fff' }}>
-                <option value="0">0%</option>
-                <option value="5">5%</option>
-                <option value="12">12%</option>
-                <option value="18">18%</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.85rem', color: '#2C181B' }}>Product Description</label>
-            <textarea rows="3" name="description" placeholder="Enter product description, materials, and gift care details..." value={formData.description} onChange={handleChange} style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e5e7eb' }} />
-          </div>
-
-          <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
-              <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} /> Product is Active
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
-              <input type="checkbox" name="featured" checked={formData.featured} onChange={handleChange} /> Featured Item
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#5C4347' }}>
-              <input type="checkbox" name="new_arrival" checked={formData.new_arrival} onChange={handleChange} /> New Arrival Tag
-            </label>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.85rem', borderTop: '1px solid #F8D7D0', paddingTop: '1.25rem' }}>
-            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isSaving}>Cancel</button>
-            <button type="submit" className="btn btn-primary" style={{ padding: '0.85rem 1.8rem' }} disabled={isSaving}>
-              {isSaving ? 'Saving...' : (productToEdit ? 'Save Changes' : 'Publish Product')}
-            </button>
           </div>
         </form>
       </div>

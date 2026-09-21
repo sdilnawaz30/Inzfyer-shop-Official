@@ -71,15 +71,20 @@ const AdminPanel = ({
       })));
       
       // Transform products for the UI
-      // Transform products for the UI
       const transformedProducts = (data.products || []).map(p => {
-        // Find primary image or use first one
-        const primaryImage = p.images?.find(img => img.is_primary) || p.images?.[0];
+        // Find primary image or use first one (handle both camelCase from Drizzle and snake_case)
+        const primaryImage = p.images?.find(img => img.isPrimary || img.is_primary) || p.images?.[0];
+        
+        // Resolve category name from categories array using categoryId or category_id
+        const categoryMatch = (data.categories || []).find(c => c.id === p.categoryId || c.id === p.category_id);
+        
         return {
           ...p,
-          categoryName: p.category?.name || 'Uncategorized',
-          imageUrl: primaryImage?.image_url || 'https://images.unsplash.com/photo-1558060370-d644479be6f7?auto=format&fit=crop&w=150&q=80',
-          hoverImage: p.images?.[1]?.image_url || null,
+          is_active: p.isActive !== undefined ? p.isActive : (p.is_active !== undefined ? p.is_active : true),
+          isActive: p.isActive !== undefined ? p.isActive : (p.is_active !== undefined ? p.is_active : true),
+          categoryName: categoryMatch ? categoryMatch.name : 'Uncategorized',
+          imageUrl: primaryImage?.imageUrl || primaryImage?.image_url || 'https://images.unsplash.com/photo-1558060370-d644479be6f7?auto=format&fit=crop&w=150&q=80',
+          hoverImage: p.images?.[1]?.imageUrl || p.images?.[1]?.image_url || null,
         };
       });
 
@@ -281,7 +286,7 @@ const AdminPanel = ({
   return (
     <div className="animate-fade-in admin-layout">
       {/* Sidebar Navigation - Glass UI */}
-      <aside className="glass glass-card" style={{
+      <aside className="glass glass-card admin-sidebar" style={{
         padding: '1.75rem 1.25rem',
         background: 'rgba(255, 255, 255, 0.92)',
         position: 'sticky',
@@ -301,7 +306,7 @@ const AdminPanel = ({
         </div>
 
         {/* Sidebar Nav Buttons */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '2rem' }}>
+        <nav className="admin-nav" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '2rem' }}>
           {sidebarItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -645,9 +650,9 @@ const AdminPanel = ({
                       </td>
                       <td style={{ padding: '0.85rem' }}>
                         <div style={{ fontWeight: 600, color: '#047857' }}>{order.payment_status || order.paymentStatus || 'Paid'} via {order.payment_method || order.paymentMethod || 'UPI'}</div>
-                        {(order.transaction_id || order.transactionId) && (
+                        {(order.gateway_payment_id || order.gatewayPaymentId || order.transaction_id || order.transactionId) && (
                           <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', fontFamily: 'monospace' }}>
-                            Txn: {order.transaction_id || order.transactionId}
+                            Txn: {order.gateway_payment_id || order.gatewayPaymentId || order.transaction_id || order.transactionId}
                           </div>
                         )}
                       </td>

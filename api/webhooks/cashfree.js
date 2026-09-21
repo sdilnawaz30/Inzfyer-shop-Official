@@ -35,25 +35,27 @@ export default async function handler(req, res) {
 
       const db = getDb();
 
-      // Update order status in database
-      await db.update(schema.orders)
-        .set({
-          paymentStatus: 'Paid',
-          transactionId: payment.cf_payment_id.toString(),
-        })
-        .where(eq(schema.orders.orderId, orderId));
-
       // Fetch the order to decrement stock
-      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.orderId, orderId));
-      if (order) {
-        for (const item of order.items) {
+      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.orderNumber, orderId));
+      if (order && order.paymentStatus !== 'PAID') {
+        // Update order status in database
+        await db.update(schema.orders)
+          .set({
+            paymentStatus: 'PAID',
+            orderStatus: 'PROCESSING',
+            gatewayPaymentId: payment.cf_payment_id.toString(),
+          })
+          .where(eq(schema.orders.orderNumber, orderId));
+
+        // Fetch items and decrement stock
+        const items = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+        for (const item of items) {
           // Decrement stock in DB
-          // Note: a real app would use a transaction or raw SQL decrement
-          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.id));
+          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.productId));
           if (product) {
             await db.update(schema.products)
-              .set({ stock: Math.max(0, product.stock - item.qty) })
-              .where(eq(schema.products.id, item.id));
+              .set({ stock: Math.max(0, product.stock - item.quantity) })
+              .where(eq(schema.products.id, item.productId));
           }
         }
       }

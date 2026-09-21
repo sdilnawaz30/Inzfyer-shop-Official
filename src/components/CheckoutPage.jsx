@@ -173,7 +173,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
+      <div className="checkout-layout">
 
         {/* Left Column (Forms) */}
         <div>

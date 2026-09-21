@@ -240,10 +240,15 @@ export default async function handler(req, res) {
       }));
       await tx.insert(schema.inventoryMovements).values(inventoryMovementsToInsert);
 
-      await enqueueNotification(tx, order.id, customerDetails.email, 'ORDER_CREATED');
-
       return order;
     });
+
+    // Enqueue notification outside of the main order transaction
+    try {
+      await enqueueNotification(db, newOrder.id, customerDetails.email, 'ORDER_CREATED');
+    } catch (notifErr) {
+      console.error('Failed to enqueue order creation notification (non-critical):', notifErr.message);
+    }
 
     return res.status(200).json({
       success: true,

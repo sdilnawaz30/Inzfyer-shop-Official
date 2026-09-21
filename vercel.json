@@ -1,4 +1,5 @@
 {
+  "name": "inzfyer-shop-official",
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/api/categories", "destination": "/api/products?resource=categories" },

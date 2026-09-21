@@ -42,29 +42,31 @@ export default async function handler(req, res) {
     if (successfulPayment) {
       // Update DB if not already updated by webhook
       const db = getDb();
-      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.orderId, orderId));
+      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.orderNumber, orderId));
       
-      if (order && order.paymentStatus !== 'Paid') {
+      if (order && order.paymentStatus !== 'PAID') {
         await db.update(schema.orders)
           .set({
-            paymentStatus: 'Paid',
-            transactionId: successfulPayment.cf_payment_id.toString(),
+            paymentStatus: 'PAID',
+            orderStatus: 'PROCESSING',
+            gatewayPaymentId: successfulPayment.cf_payment_id.toString(),
           })
-          .where(eq(schema.orders.orderId, orderId));
+          .where(eq(schema.orders.orderNumber, orderId));
 
-        // Decrement stock
-        for (const item of order.items) {
-          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.id));
+        // Fetch items and decrement stock
+        const items = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+        for (const item of items) {
+          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.productId));
           if (product) {
             await db.update(schema.products)
-              .set({ stock: Math.max(0, product.stock - item.qty) })
-              .where(eq(schema.products.id, item.id));
+              .set({ stock: Math.max(0, product.stock - item.quantity) })
+              .where(eq(schema.products.id, item.productId));
           }
         }
       }
 
       // Fetch the updated order
-      const [updatedOrder] = await db.select().from(schema.orders).where(eq(schema.orders.orderId, orderId));
+      const [updatedOrder] = await db.select().from(schema.orders).where(eq(schema.orders.orderNumber, orderId));
 
       res.status(200).json({
         success: true,

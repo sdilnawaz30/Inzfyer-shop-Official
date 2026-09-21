@@ -169,29 +169,24 @@ export const generateAndDownloadInvoice = async (invoiceData, isPos = false) => 
   // Table
   const tableData = items.map((item, index) => {
     const qty = Number(item.quantity || item.qty || 1);
-    const unitPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
-    const gstRate = item.gstRate || item.gst_rate ? Number(item.gstRate || item.gst_rate) : 18.0;
     
-    // Exact DB calculations
-    const basePrice = (item.basePrice || item.base_price) ? Number(item.basePrice || item.base_price) : unitPrice / (1 + gstRate / 100);
-    const taxAmt = (item.taxAmount || item.tax_amount) ? Number(item.taxAmount || item.tax_amount) : (unitPrice - basePrice) * qty;
-    const itemSubtotal = unitPrice * qty;
+    // Exact DB calculations ONLY. No fallback division by 1 + gstRate.
+    const unitPrice = Number(item.unitPrice || item.price || item.unit_price || 0);
+    const basePrice = Number(item.basePrice || item.base_price || unitPrice);
+    const taxAmt = Number(item.taxAmount || item.tax_amount || 0);
+    const itemSubtotal = unitPrice * qty; // Total for this line (inc tax)
     
     let taxStr = '';
-    const cgstAmt = item.cgstAmount || item.cgst_amount;
-    const sgstAmt = item.sgstAmount || item.sgst_amount;
-    const igstAmt = item.igstAmount || item.igst_amount;
+    const cgstAmt = Number(item.cgstAmount || item.cgst_amount || 0);
+    const sgstAmt = Number(item.sgstAmount || item.sgst_amount || 0);
+    const igstAmt = Number(item.igstAmount || item.igst_amount || 0);
     
-    if (cgstAmt && Number(cgstAmt) > 0) {
-      taxStr = `CGST: ₹${Number(cgstAmt).toFixed(2)}\nSGST: ₹${Number(sgstAmt).toFixed(2)}`;
-    } else if (igstAmt && Number(igstAmt) > 0) {
-      taxStr = `IGST: ₹${Number(igstAmt).toFixed(2)}`;
+    if (cgstAmt > 0 || sgstAmt > 0) {
+      taxStr = `CGST: ₹${cgstAmt.toFixed(2)}\nSGST: ₹${sgstAmt.toFixed(2)}`;
+    } else if (igstAmt > 0) {
+      taxStr = `IGST: ₹${igstAmt.toFixed(2)}`;
     } else {
-      if ((order.address || order.state || '').toLowerCase().includes('delhi')) {
-        taxStr = `CGST: ₹${(taxAmt/2).toFixed(2)}\nSGST: ₹${(taxAmt/2).toFixed(2)}`;
-      } else {
-        taxStr = `IGST: ₹${taxAmt.toFixed(2)}`;
-      }
+      taxStr = `₹${taxAmt.toFixed(2)}`;
     }
     
     const desc = item.productName || item.product_name || item.name;

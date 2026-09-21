@@ -39,3 +39,5 @@ scratch/
 diff.txt
 build.log
 install.log
+.vercel
+.env*

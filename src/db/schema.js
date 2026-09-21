@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, boolean, numeric, uuid, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, integer, boolean, numeric, uuid, index, uniqueIndex, serial } from 'drizzle-orm/pg-core';
 
 export const profiles = pgTable('profiles', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -58,7 +58,7 @@ export const productImages = pgTable('product_images', {
 });
 
 export const orders = pgTable('orders', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: serial('id').primaryKey(),
   orderNumber: text('order_number').notNull().unique(),
   customerName: text('customer_name').notNull(),
   phone: text('phone'),
@@ -89,9 +89,9 @@ export const orders = pgTable('orders', {
 });
 
 export const orderItems = pgTable('order_items', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: serial('id').primaryKey(),
 
-  orderId: uuid('order_id')
+  orderId: integer('order_id')
     .notNull()
     .references(() => orders.id, { onDelete: 'cascade' }),
 
@@ -137,7 +137,7 @@ export const inventoryMovements = pgTable('inventory_movements', {
 
 export const notifications = pgTable('notifications', {
   id: uuid('id').defaultRandom().primaryKey(),
-  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  orderId: integer('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   customerContact: text('customer_contact').notNull(),
   notificationType: text('notification_type').notNull(),
   status: text('status').default('PENDING').notNull(),

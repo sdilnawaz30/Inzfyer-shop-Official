@@ -307,7 +307,7 @@ const ShopPage = ({
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid #fce7f3' }}>
+                        <div className="product-card-footer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid #fce7f3' }}>
                           <div>
                             <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#db2777' }}>₹{p.price.toLocaleString('en-IN')}</span>
                             {p.originalPrice && (
