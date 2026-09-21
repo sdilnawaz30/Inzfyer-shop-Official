@@ -80,32 +80,7 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
         </div>
       </section>
 
-      <section className="store-section featured-section">
-        <div className="split-heading"><div className="section-heading left"><span>Curated selection</span><h2>Little things, <i>big joy.</i></h2></div><button className="text-link" onClick={() => setActivePage('shop')}>View all <ArrowRight size={18} /></button></div>
-        <div className="grid-products storefront-products">
-          {isLoading ? (
-            Array(4).fill(0).map((_, i) => (
-              <div key={i} className="product-card skeleton-card" style={{ height: '380px', background: '#f9fafb', borderRadius: '15px' }}></div>
-            ))
-          ) : featuredProducts.length > 0 ? (
-            featuredProducts.map((product) => {
-              const inWishlist = wishlist.some((item) => item.id === product.id);
-              return <article className="product-card" key={product.id}>
-                <div className="product-image-container">
-                  {product.tag && <span className="product-tag badge badge-pink">{product.tag}</span>}
-                  <button className={`wishlist-btn ${inWishlist ? 'active' : ''}`} onClick={() => onToggleWishlist(product)} aria-label={`Save ${product.name}`}><Heart size={18} fill={inWishlist ? 'currentColor' : 'none'} /></button>
-                  <ResponsiveImage src={product.image} alt={product.name} className="product-image" onClick={() => onSelectProduct(product)} />
-                </div>
-                <div className="product-copy"><small>{product.category}</small><h3 onClick={() => onSelectProduct(product)}>{product.name}</h3><div className="product-rating"><Star size={14} fill="currentColor" /> {product.rating} <span>({product.reviewsCount})</span></div><div className="product-bottom product-card-footer"><div><b>₹{product.price.toLocaleString('en-IN')}</b>{product.originalPrice && <del>₹{product.originalPrice.toLocaleString('en-IN')}</del>}</div><button onClick={() => onAddToCart(product)} aria-label={`Add ${product.name} to cart`}><ShoppingBag size={17} /></button></div></div>
-              </article>;
-            })
-          ) : (
-            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-              No featured products found.
-            </div>
-          )}
-        </div>
-      </section>
+
 
       <section className="why-choose-section">
         <div className="section-heading"><span>Our Promise</span><h2>Why Choose <i>INZFYER</i></h2><p>Crafted to bring a little more magic to your day.</p></div>
