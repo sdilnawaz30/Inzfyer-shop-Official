@@ -190,18 +190,28 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                   </div>
                   <div>
                     <label className="form-label">Mobile Number *</label>
-                    <input type="tel" required pattern="[6-9][0-9]{9}" title="Valid 10-digit Indian mobile number" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} placeholder="10-digit mobile number" />
+                    <input 
+                      type="tel" 
+                      required 
+                      pattern="[6-9][0-9]{9}" 
+                      title="Valid 10-digit Indian mobile number" 
+                      maxLength="10"
+                      value={formData.mobile} 
+                      onInput={(e) => e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10)}
+                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} 
+                      placeholder="10-digit mobile number" 
+                    />
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label className="form-label">Email Address *</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="For order updates" />
+                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value.toLowerCase() })} placeholder="For order updates" />
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label className="form-label">Address Line 1 *</label>
-                  <input type="text" required value={formData.address1} onChange={(e) => setFormData({ ...formData, address1: e.target.value })} placeholder="House/Flat No., Building Name" />
+                  <input type="text" required maxLength="255" value={formData.address1} onChange={(e) => setFormData({ ...formData, address1: e.target.value })} placeholder="House/Flat No., Building Name" />
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
@@ -212,11 +222,36 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                 <div className="checkout-field-row-3">
                   <div>
                     <label className="form-label">City *</label>
-                    <input type="text" required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                    <input type="text" required list="indian-cities" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                    <datalist id="indian-cities">
+                      <option value="Mumbai" /><option value="Delhi" /><option value="Bengaluru" /><option value="Hyderabad" />
+                      <option value="Ahmedabad" /><option value="Chennai" /><option value="Kolkata" /><option value="Surat" />
+                      <option value="Pune" /><option value="Jaipur" /><option value="Lucknow" /><option value="Kanpur" />
+                    </datalist>
                   </div>
                   <div>
                     <label className="form-label">State *</label>
-                    <input type="text" required value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} />
+                    <select required value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1d5db' }}>
+                      <option value="">Select State</option>
+                      <option value="Andhra Pradesh">Andhra Pradesh</option><option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                      <option value="Assam">Assam</option><option value="Bihar">Bihar</option>
+                      <option value="Chhattisgarh">Chhattisgarh</option><option value="Goa">Goa</option>
+                      <option value="Gujarat">Gujarat</option><option value="Haryana">Haryana</option>
+                      <option value="Himachal Pradesh">Himachal Pradesh</option><option value="Jharkhand">Jharkhand</option>
+                      <option value="Karnataka">Karnataka</option><option value="Kerala">Kerala</option>
+                      <option value="Madhya Pradesh">Madhya Pradesh</option><option value="Maharashtra">Maharashtra</option>
+                      <option value="Manipur">Manipur</option><option value="Meghalaya">Meghalaya</option>
+                      <option value="Mizoram">Mizoram</option><option value="Nagaland">Nagaland</option>
+                      <option value="Odisha">Odisha</option><option value="Punjab">Punjab</option>
+                      <option value="Rajasthan">Rajasthan</option><option value="Sikkim">Sikkim</option>
+                      <option value="Tamil Nadu">Tamil Nadu</option><option value="Telangana">Telangana</option>
+                      <option value="Tripura">Tripura</option><option value="Uttar Pradesh">Uttar Pradesh</option>
+                      <option value="Uttarakhand">Uttarakhand</option><option value="West Bengal">West Bengal</option>
+                      <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option><option value="Chandigarh">Chandigarh</option>
+                      <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option><option value="Delhi">Delhi</option>
+                      <option value="Jammu and Kashmir">Jammu and Kashmir</option><option value="Ladakh">Ladakh</option>
+                      <option value="Lakshadweep">Lakshadweep</option><option value="Puducherry">Puducherry</option>
+                    </select>
                   </div>
                   <div>
                     <label className="form-label">Pincode *</label>

@@ -250,6 +250,13 @@ export default async function handler(req, res) {
       console.error('Failed to enqueue order creation notification (non-critical):', notifErr.message);
     }
 
+    // Passive trigger for order expiry cleanup (non-blocking)
+    try {
+      const host = req.headers.host || 'localhost:5173';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      fetch(`${protocol}://${host}/api/cron/expire-orders`).catch(() => {});
+    } catch (e) {}
+
     return res.status(200).json({
       success: true,
       paymentSessionId: paymentSessionId,

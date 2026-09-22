@@ -249,7 +249,7 @@ const AdminPanel = ({
 
   // Calculated Metrics for Glass Cards
   const totalProducts = products.length;
-  const totalOrders = salesHistory.length;
+  const totalOrders = salesHistory.filter(s => s.paymentStatus !== 'EXPIRED').length;
   // Revenue should only count PAID orders
   const totalRevenue = salesHistory
     .filter(sale => sale.paymentStatus === 'PAID')
@@ -837,7 +837,7 @@ const AdminPanel = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B' }}>Customer Orders Log</h3>
               <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', width: '100%' }}>
-                {['All', 'PENDING_PAYMENT', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'].map(f => (
+                {['All', 'PENDING_PAYMENT', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED', 'EXPIRED'].map(f => (
                   <button 
                     key={f}
                     onClick={() => setOrderFilter(f)}
@@ -865,7 +865,11 @@ const AdminPanel = ({
                 </thead>
                 <tbody>
                   {salesHistory
-                    .filter(order => orderFilter === 'All' || order.orderStatus === orderFilter || order.paymentStatus === orderFilter)
+                    .filter(order => {
+                      if (orderFilter === 'All') return order.paymentStatus !== 'EXPIRED';
+                      if (orderFilter === 'EXPIRED') return order.paymentStatus === 'EXPIRED';
+                      return order.orderStatus === orderFilter || order.paymentStatus === orderFilter;
+                    })
                     .slice().reverse().map((order, idx) => (
                     <tr 
                       key={order.id || idx} 
@@ -927,7 +931,11 @@ const AdminPanel = ({
             <div className="admin-mobile-cards-view">
               <div className="admin-card-list">
                 {salesHistory
-                  .filter(order => orderFilter === 'All' || order.orderStatus === orderFilter || order.paymentStatus === orderFilter)
+                  .filter(order => {
+                    if (orderFilter === 'All') return order.paymentStatus !== 'EXPIRED';
+                    if (orderFilter === 'EXPIRED') return order.paymentStatus === 'EXPIRED';
+                    return order.orderStatus === orderFilter || order.paymentStatus === orderFilter;
+                  })
                   .slice().reverse().map((order, idx) => (
                     <div 
                       key={order.id || idx} 

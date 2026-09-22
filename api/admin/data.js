@@ -67,6 +67,13 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, message: 'Forbidden. Admin access required.' });
     }
 
+    // Passive trigger for order expiry cleanup (non-blocking)
+    try {
+      const host = req.headers.host || 'localhost:5173';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      fetch(`${protocol}://${host}/api/cron/expire-orders`).catch(() => {});
+    } catch (e) {}
+
     // Fetch all necessary data for the admin dashboard
     const allProducts = await db.select().from(schema.products);
     const allCategories = await db.select().from(schema.categories);

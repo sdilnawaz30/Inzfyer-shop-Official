@@ -64,5 +64,11 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, x-webhook-signature, x-webhook-timestamp" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/expire-orders",
+      "schedule": "* * * * *"
+    }
   ]
 }
