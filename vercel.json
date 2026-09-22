@@ -8,6 +8,13 @@
     { "source": "/api/admin/check", "destination": "/api/admin/data?checkOnly=true" },
     { "source": "/api/admin/update-order-status", "destination": "/api/admin/action?action=updateOrderStatus" },
     { "source": "/api/admin/products/validate", "destination": "/api/admin/action?action=validateSkuSlug" },
+    { "source": "/dilnawaz-weds-sharmila", "destination": "https://wedding-nine-flax-69.vercel.app/" },
+    { "source": "/dilnawaz-weds-sharmila/", "destination": "https://wedding-nine-flax-69.vercel.app/" },
+    { "source": "/dilnawaz-weds-sharmila/:path*", "destination": "https://wedding-nine-flax-69.vercel.app/:path*" },
+    { "source": "/videos/:path*", "destination": "https://wedding-nine-flax-69.vercel.app/videos/:path*" },
+    { "source": "/music/:path*", "destination": "https://wedding-nine-flax-69.vercel.app/music/:path*" },
+    { "source": "/_next/:path*", "destination": "https://wedding-nine-flax-69.vercel.app/_next/:path*" },
+    { "source": "/icon.svg", "destination": "https://wedding-nine-flax-69.vercel.app/icon.svg" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
