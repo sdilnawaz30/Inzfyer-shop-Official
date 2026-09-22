@@ -46,7 +46,7 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
           <h1><span className="hero-title-line">Collect <span>Cute.</span></span><br /><span className="hero-title-line">Carry <em>Joy.</em></span></h1>
           <div className="hero-rule"><Heart size={15} fill="currentColor" /></div>
           <p>Handmade plushies, charms &amp; adorable gifts made to <strong>brighten every day.</strong></p>
-          <button className="hero-cta" onClick={() => setActivePage('shop')}>Shop Now <ArrowRight size={22} /></button>
+          <button className="hero-cta" onClick={() => { setSelectedCategory('New Arrivals'); setActivePage('shop'); }}>New Arrivals <ArrowRight size={22} /></button>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="hero-image-frame"><img src={heroImg} alt="" fetchpriority="high" /></div>
