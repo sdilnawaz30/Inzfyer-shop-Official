@@ -12,7 +12,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const updateStatusSchema = z.object({
-  orderId: z.string().min(1, "Order ID is required"),
+  orderId: z.union([z.string(), z.number()], "Order ID is required"),
   newStatus: z.string().min(1, "Status is required"),
 });
 
@@ -422,8 +422,16 @@ export default async function handler(req, res) {
       }
       const { orderId, newStatus } = parsed.data;
 
+      const orderIdStr = String(orderId);
+      const orderIdNum = Number(orderId);
+
+      const conditions = [eq(schema.orders.orderNumber, orderIdStr)];
+      if (!isNaN(orderIdNum)) {
+        conditions.push(eq(schema.orders.id, orderIdNum));
+      }
+
       const [existingOrder] = await db.select().from(schema.orders).where(
-        or(eq(schema.orders.orderNumber, orderId), eq(schema.orders.id, orderId))
+        or(...conditions)
       ).limit(1);
 
       if (!existingOrder) {
