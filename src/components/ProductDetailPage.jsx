@@ -429,7 +429,7 @@ const ProductDetailPage = ({ product, onClose, onAddToCart, onBuyNow, onToggleWi
               <h3 style={{ fontSize: '1.1rem', color: '#2C181B', fontWeight: 700, marginBottom: '0.5rem' }}>Frequently Asked Questions</h3>
               <details style={{ background: '#FAF0ED', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(224, 150, 137, 0.3)' }}>
                 <summary style={{ fontWeight: 600, color: '#8C2E3C', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>How long does delivery take?</summary>
-                <p style={{ marginTop: '0.75rem', color: '#5C4347', fontSize: '0.9rem', lineHeight: '1.5' }}>Most orders are processed within 24 hours and delivered within 5-7 business days across India. Express shipping options are available at checkout.</p>
+                <p style={{ marginTop: '0.75rem', color: '#5C4347', fontSize: '0.9rem', lineHeight: '1.5' }}>Most orders are processed within 24 hours and delivered within 1-4 business days across India. Express shipping options are available at checkout.</p>
               </details>
               <details style={{ background: '#FAF0ED', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(224, 150, 137, 0.3)' }}>
                 <summary style={{ fontWeight: 600, color: '#8C2E3C', cursor: 'pointer', outline: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Is cash on delivery available?</summary>

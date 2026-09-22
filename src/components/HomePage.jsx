@@ -6,7 +6,7 @@ import { fetchFeaturedProducts, fetchRecentProducts, fetchCategories } from '../
 import './HomePage.css';
 
 const highlights = [
-  { label: 'Delivery in 5–7 Days', icon: Truck },
+  { label: 'Delivery in 1-4 Days', icon: Truck },
   { label: 'Secure Payments', icon: Lock },
   { label: 'Handmade Quality', icon: Heart },
 ];
