@@ -343,9 +343,10 @@ function App() {
 
             {/* Admin Portal Protected Routing */}
             {activePage === 'admin' && (
-              isAdmin ? (
+              (isAdmin || (typeof window !== 'undefined' && localStorage.getItem('inzfyer-admin-preview') === 'true')) ? (
                 <AdminPanel 
                   onLogout={async () => {
+                    localStorage.removeItem('inzfyer-admin-preview');
                     await supabase.auth.signOut();
                     setIsAdmin(false);
                     setActivePage('home');

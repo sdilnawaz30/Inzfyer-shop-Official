@@ -22,7 +22,7 @@ const CartView = ({
   const [isCheckingShipping, setIsCheckingShipping] = useState(false);
   const [shippingError, setShippingError] = useState('');
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty ?? item.quantity ?? 1)), 0);
   const discount = appliedPromo ? subtotal * 0.1 : 0;
   
   // Safe fallbacks before config loads
@@ -167,21 +167,21 @@ const CartView = ({
                     {/* Qty Controls */}
                     <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e5e7eb', borderRadius: '999px', background: '#ffffff' }}>
                       <button 
-                        onClick={() => onUpdateQty(item.id, item.qty - 1)}
+                        onClick={() => onUpdateQty(item.id, (item.qty ?? item.quantity ?? 1) - 1)}
                         style={{ padding: '0.3rem 0.6rem', border: 'none', background: 'none', cursor: 'pointer' }}
                       >
                         <Minus size={14} />
                       </button>
-                      <span style={{ padding: '0 0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>{item.qty}</span>
+                      <span style={{ padding: '0 0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>{item.qty ?? item.quantity ?? 1}</span>
                       <button 
-                        onClick={() => onUpdateQty(item.id, item.qty + 1, item.stock)}
-                        disabled={item.stock !== undefined && item.qty >= item.stock}
+                        onClick={() => onUpdateQty(item.id, (item.qty ?? item.quantity ?? 1) + 1, item.stock)}
+                        disabled={item.stock !== undefined && (item.qty ?? item.quantity ?? 1) >= item.stock}
                         style={{ 
                           padding: '0.3rem 0.6rem', 
                           border: 'none', 
                           background: 'none', 
-                          cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
-                          opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.5 : 1
+                          cursor: (item.stock !== undefined && (item.qty ?? item.quantity ?? 1) >= item.stock) ? 'not-allowed' : 'pointer',
+                          opacity: (item.stock !== undefined && (item.qty ?? item.quantity ?? 1) >= item.stock) ? 0.5 : 1
                         }}
                       >
                         <Plus size={14} />
