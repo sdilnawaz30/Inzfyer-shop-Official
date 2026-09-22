@@ -92,6 +92,8 @@ const OrderSuccessPage = ({ setActivePage }) => {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
+  const isPaid = order.paymentStatus === 'PAID';
+
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem' }}>
       <div className="glass glass-card" style={{ background: '#ffffff', padding: '3rem 2rem', textAlign: 'center' }}>
@@ -99,30 +101,43 @@ const OrderSuccessPage = ({ setActivePage }) => {
           width: '80px',
           height: '80px',
           borderRadius: '50%',
-          background: '#d1fae5',
-          color: '#047857',
+          background: isPaid ? '#d1fae5' : '#fef3c7',
+          color: isPaid ? '#047857' : '#d97706',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 1.5rem auto',
-          boxShadow: '0 4px 15px rgba(4, 120, 87, 0.2)'
+          boxShadow: isPaid ? '0 4px 15px rgba(4, 120, 87, 0.2)' : '0 4px 15px rgba(217, 119, 6, 0.2)'
         }}>
-          <CheckCircle2 size={46} />
+          {isPaid ? <CheckCircle2 size={46} /> : <Loader2 size={46} className="spin" />}
         </div>
 
         <h1 className="brand-font" style={{ fontSize: '2.5rem', color: '#1f2937', marginBottom: '0.5rem' }}>
-          Order Confirmed!
+          {isPaid ? 'Order Placed Successfully' : 'Payment Processing'}
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '1.05rem', marginBottom: '2rem' }}>
-          Thank you, <strong style={{ color: '#db2777' }}>{order.customerName}</strong>. Your order has been securely placed.
+        
+        <p style={{ color: '#6b7280', fontSize: '1.05rem', marginBottom: '1rem' }}>
+          Thank you for your order, <strong style={{ color: '#db2777' }}>{order.customerName}</strong>!
         </p>
+
+        {isPaid && (
+          <p style={{ color: '#047857', fontSize: '1.1rem', fontWeight: 500, marginBottom: '2rem', padding: '0.75rem 1.5rem', background: '#ecfdf5', borderRadius: '8px', display: 'inline-block' }}>
+            Your order will be dispatched within 1–4 days.
+          </p>
+        )}
+
+        {!isPaid && (
+          <p style={{ color: '#d97706', fontSize: '1.05rem', marginBottom: '2rem' }}>
+            We are verifying your payment status. Please check back later.
+          </p>
+        )}
 
         {/* Order Details Panel */}
         <div style={{ background: '#fdf2f8', borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'left', fontSize: '0.95rem', border: '1px solid #fce7f3' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
-              <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Order Number</span>
-              <strong style={{ color: '#1f2937' }}>{order.orderNumber}</strong>
+              <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Order ID</span>
+              <strong style={{ color: '#1f2937' }}>#{order.orderNumber}</strong>
             </div>
             <div>
               <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Order Date</span>
@@ -130,68 +145,51 @@ const OrderSuccessPage = ({ setActivePage }) => {
             </div>
             <div>
               <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Payment Status</span>
-              <strong style={{ color: '#047857', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <CheckCircle2 size={16} /> {order.paymentStatus || 'PENDING'}
+              <strong style={{ color: isPaid ? '#047857' : '#d97706', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                {isPaid ? <CheckCircle2 size={16} /> : <Loader2 size={16} />} {order.paymentStatus || 'PENDING'}
               </strong>
             </div>
             <div>
-              <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Order Status</span>
-              <strong style={{ color: '#db2777' }}>{order.orderStatus || 'PENDING_PAYMENT'}</strong>
+              <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Total Paid</span>
+              <strong style={{ color: '#db2777' }}>₹{Number(order.finalTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
             </div>
           </div>
 
           {/* Items Table */}
-          <div style={{ background: '#ffffff', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', border: '1px solid #fce7f3' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1rem', borderBottom: '1px solid #f3f4f6', paddingBottom: '0.5rem' }}>Items Ordered</h3>
+          <div style={{ background: '#ffffff', borderRadius: '12px', padding: '1rem', border: '1px solid #fce7f3' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1rem', borderBottom: '1px solid #f3f4f6', paddingBottom: '0.5rem' }}>Product(s)</h3>
             {items.map((item, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.9rem' }}>
                 <div>
                   <span style={{ fontWeight: 600, color: '#374151' }}>{item.productName}</span>
                   <span style={{ color: '#6b7280', marginLeft: '0.5rem' }}>x{item.quantity}</span>
                 </div>
-                <strong style={{ color: '#1f2937' }}>₹{Number(item.subtotal ?? ((Number(item.unitPrice ?? item.price ?? 0)) * Number(item.quantity || 1))).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
               </div>
             ))}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', fontSize: '0.95rem', color: '#4b5563' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Subtotal</span>
-              <strong style={{ color: '#1f2937' }}>₹{Number(order.subtotal || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-            </div>
-            
-            {Number(order.discount) > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669' }}>
-                <span>Discount</span>
-                <strong>-₹{Number(order.discount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Shipping Charges</span>
-              <strong style={{ color: '#1f2937' }}>₹{Number(order.shippingCharge || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px dashed #f9a8d4', paddingTop: '1rem', marginBottom: '0.2rem' }}>
-            <span style={{ color: '#6b7280', fontSize: '1rem' }}>Grand Total:</span>
-            <strong style={{ color: '#db2777', fontSize: '1.25rem' }}>₹{Number(order.finalTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
-          </div>
-          <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem', fontStyle: 'italic' }}>
-            Prices are inclusive of all taxes
           </div>
         </div>
 
         {/* Buttons */}
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '2rem' }}>
           <button onClick={handleDownloadPDF} disabled={isDownloading} className="btn btn-primary" style={{ padding: '0.85rem 1.5rem', flex: '1 1 auto', minWidth: '200px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             {isDownloading ? <Loader2 size={18} style={{ marginRight: '0.5rem', animation: 'spin 1s linear infinite' }} /> : <Download size={18} style={{ marginRight: '0.5rem' }} />} 
             {isDownloading ? 'Generating PDF...' : 'Download Invoice'}
           </button>
-          <button onClick={() => setActivePage('shop')} className="btn btn-ghost" style={{ padding: '0.85rem 1.5rem', flex: '1 1 100%' }}>
+          <button onClick={() => setActivePage('shop')} className="btn btn-ghost" style={{ padding: '0.85rem 1.5rem', flex: '1 1 auto', minWidth: '200px' }}>
             Continue Shopping <ArrowRight size={18} style={{ marginLeft: '0.5rem' }} />
           </button>
         </div>
+
+        {/* Customer Support */}
+        <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '1.5rem', fontSize: '0.9rem', color: '#6b7280' }}>
+          <p style={{ marginBottom: '0.25rem' }}>Need help with your order?</p>
+          <p>
+            Please contact our support team at{' '}
+            <a href="mailto:admin@inzfyer.in" style={{ color: '#db2777', fontWeight: 500, textDecoration: 'none' }}>admin@inzfyer.in</a>
+            {' '}and keep your Order ID handy.
+          </p>
+        </div>
+
         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
