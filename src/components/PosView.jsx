@@ -150,15 +150,15 @@ const PosView = ({ products, onCompleteSale }) => {
   };
 
   return (
-    <div className="pos-layout animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem', alignItems: 'start' }}>
+    <div className="pos-layout animate-fade-in">
       {/* Left Column: Product Search, Barcode Reader & Product Catalog Grid */}
-      <div className="glass glass-card" style={{ background: '#ffffff', padding: '1.75rem' }}>
+      <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 3vw, 1.75rem)' }}>
         <h2 className="brand-font" style={{ fontSize: '1.8rem', color: '#2C181B', marginBottom: '1.25rem' }}>
           POS Sales & Billing Terminal
         </h2>
 
         {/* Barcode Scanner Ready Field & Search Bar */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="pos-search-row">
           {/* Barcode Scanner Input */}
           <form onSubmit={handleBarcodeScan} style={{ position: 'relative' }}>
             <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#8C2E3C', display: 'block', marginBottom: '0.3rem' }}>
@@ -250,7 +250,7 @@ const PosView = ({ products, onCompleteSale }) => {
       </div>
 
       {/* Right Column: POS Counter Cart & Billing */}
-      <div className="glass glass-card" style={{ background: '#ffffff', padding: '1.75rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 3vw, 1.75rem)', display: 'flex', flexDirection: 'column', height: '100%' }}>
         <h2 className="brand-font" style={{ fontSize: '1.6rem', color: '#2C181B', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <ShoppingCart color="#A63A4B" size={24} /> Billing Counter
         </h2>

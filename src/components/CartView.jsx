@@ -76,7 +76,7 @@ const CartView = ({
   };
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto', width: '100%' }}>
       {/* Title */}
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
         <h1 className="brand-font" style={{ fontSize: '2.8rem', color: '#1f2937', marginBottom: '0.5rem' }}>
@@ -111,13 +111,13 @@ const CartView = ({
           </button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '2rem', alignItems: 'start' }}>
+        <div className="cart-layout-grid">
           
           {/* Cart Items List */}
-          <div>
+          <div style={{ minWidth: 0, width: '100%' }}>
             {/* Free Shipping Progress Meter */}
             <div className="glass glass-card" style={{ background: '#ffffff', marginBottom: '1.5rem', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.88rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.88rem', flexWrap: 'wrap', gap: '0.25rem' }}>
                 <span style={{ fontWeight: 700, color: freeShipping ? '#047857' : '#db2777' }}>
                   {freeShipping ? 'You unlocked Free Express Shipping & Gift Wrapping!' : `Add ₹${amountNeededForFreeShipping.toLocaleString('en-IN')} more for Free Shipping!`}
                 </span>
@@ -134,26 +134,19 @@ const CartView = ({
             </div>
 
             {/* Cart Items */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
               {cart.map((item) => (
                 <div 
                   key={item.id} 
-                  className="glass glass-card"
-                  style={{
-                    background: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1.25rem',
-                    padding: '1.25rem'
-                  }}
+                  className="glass glass-card cart-item-card"
                 >
                   <ResponsiveImage 
                     src={item.image} 
                     alt={item.name} 
-                    style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '14px', background: '#fdf2f8' }} 
+                    style={{ width: '75px', height: '75px', objectFit: 'cover', borderRadius: '14px', background: '#fdf2f8', flexShrink: 0 }} 
                   />
 
-                  <div style={{ flexGrow: 1 }}>
+                  <div className="cart-item-content">
                     <span style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: 600, textTransform: 'uppercase' }}>
                       {item.category}
                     </span>
@@ -164,49 +157,51 @@ const CartView = ({
                       ₹{item.price.toLocaleString('en-IN')}
                     </div>
                     {item.includeGiftWrap && (
-                      <span className="badge badge-pink" style={{ marginTop: '0.35rem', fontSize: '0.7rem' }}>
-                        <Gift size={12} /> Gift Boxed {item.giftNote ? `("${item.giftNote}")` : ''}
+                      <span className="badge badge-pink" style={{ marginTop: '0.35rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', maxWidth: '100%', overflowWrap: 'break-word' }}>
+                        <Gift size={12} style={{ flexShrink: 0 }} /> Gift Boxed {item.giftNote ? `("${item.giftNote}")` : ''}
                       </span>
                     )}
                   </div>
 
-                  {/* Qty Controls */}
-                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e5e7eb', borderRadius: '999px', background: '#ffffff' }}>
+                  <div className="cart-item-actions-wrapper">
+                    {/* Qty Controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e5e7eb', borderRadius: '999px', background: '#ffffff' }}>
+                      <button 
+                        onClick={() => onUpdateQty(item.id, item.qty - 1)}
+                        style={{ padding: '0.3rem 0.6rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span style={{ padding: '0 0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>{item.qty}</span>
+                      <button 
+                        onClick={() => onUpdateQty(item.id, item.qty + 1, item.stock)}
+                        disabled={item.stock !== undefined && item.qty >= item.stock}
+                        style={{ 
+                          padding: '0.3rem 0.6rem', 
+                          border: 'none', 
+                          background: 'none', 
+                          cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
+                          opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.5 : 1
+                        }}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+
+                    {/* Remove Item */}
                     <button 
-                      onClick={() => onUpdateQty(item.id, item.qty - 1)}
-                      style={{ padding: '0.3rem 0.6rem', border: 'none', background: 'none', cursor: 'pointer' }}
+                      onClick={() => onRemoveFromCart(item.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '0.5rem' }}
+                      title="Remove item"
                     >
-                      <Minus size={14} />
-                    </button>
-                    <span style={{ padding: '0 0.5rem', fontWeight: 700, fontSize: '0.9rem' }}>{item.qty}</span>
-                    <button 
-                      onClick={() => onUpdateQty(item.id, item.qty + 1, item.stock)}
-                      disabled={item.stock !== undefined && item.qty >= item.stock}
-                      style={{ 
-                        padding: '0.3rem 0.6rem', 
-                        border: 'none', 
-                        background: 'none', 
-                        cursor: (item.stock !== undefined && item.qty >= item.stock) ? 'not-allowed' : 'pointer',
-                        opacity: (item.stock !== undefined && item.qty >= item.stock) ? 0.5 : 1
-                      }}
-                    >
-                      <Plus size={14} />
+                      <Trash2 size={18} />
                     </button>
                   </div>
-
-                  {/* Remove Item */}
-                  <button 
-                    onClick={() => onRemoveFromCart(item.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '0.5rem' }}
-                    title="Remove item"
-                  >
-                    <Trash2 size={18} />
-                  </button>
                 </div>
               ))}
             </div>
 
-            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
               <button onClick={() => setActivePage('shop')} className="btn btn-ghost" style={{ fontSize: '0.88rem' }}>
                 ← Continue Shopping
               </button>
@@ -217,7 +212,7 @@ const CartView = ({
           </div>
 
           {/* Order Summary Panel */}
-          <div className="glass glass-card" style={{ background: '#ffffff', position: 'sticky', top: '100px' }}>
+          <div className="glass glass-card cart-summary-sticky" style={{ background: '#ffffff', width: '100%', minWidth: 0 }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1f2937', marginBottom: '1.25rem', borderBottom: '1px solid #fce7f3', paddingBottom: '0.75rem' }}>
               Order Summary
             </h3>
@@ -233,9 +228,9 @@ const CartView = ({
                   placeholder="Try INZFYER10"
                   value={promoInput}
                   onChange={(e) => setPromoInput(e.target.value)}
-                  style={{ fontSize: '0.85rem', padding: '0.65rem' }}
+                  style={{ fontSize: '0.85rem', padding: '0.65rem', flex: 1, minWidth: 0 }}
                 />
-                <button type="submit" className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontSize: '0.85rem' }}>
+                <button type="submit" className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', flexShrink: 0 }}>
                   Apply
                 </button>
               </div>
@@ -267,9 +262,9 @@ const CartView = ({
                     value={shippingPincode}
                     maxLength={6}
                     onChange={(e) => setShippingPincode(e.target.value.replace(/\D/g, ''))}
-                    style={{ fontSize: '0.85rem', padding: '0.65rem', flex: 1 }}
+                    style={{ fontSize: '0.85rem', padding: '0.65rem', flex: 1, minWidth: 0 }}
                   />
-                  <button type="submit" disabled={isCheckingShipping} className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontSize: '0.85rem' }}>
+                  <button type="submit" disabled={isCheckingShipping} className="btn btn-secondary" style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', flexShrink: 0 }}>
                     {isCheckingShipping ? <Loader2 size={16} className="spin" /> : 'Check'}
                   </button>
                 </div>

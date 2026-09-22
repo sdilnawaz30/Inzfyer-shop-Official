@@ -25,7 +25,9 @@ import {
   ArrowDownRight,
   RefreshCw,
   Printer,
-  Tags
+  Tags,
+  Menu,
+  X
 } from 'lucide-react';
 import ResponsiveImage from './ResponsiveImage';
 import logoImg from '../assets/logo.png';
@@ -39,6 +41,7 @@ const AdminPanel = ({
   showToast
 }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [stockInAmount, setStockInAmount] = useState(10);
   const [products, setProducts] = useState([]);
@@ -285,7 +288,144 @@ const AdminPanel = ({
 
   return (
     <div className="animate-fade-in admin-layout">
-      {/* Sidebar Navigation - Glass UI */}
+      {/* Mobile Topbar Navigation */}
+      <div className="admin-mobile-header">
+        <button 
+          onClick={() => setIsMobileNavOpen(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#A63A4B',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.4rem',
+            borderRadius: '8px'
+          }}
+          aria-label="Open Admin Menu"
+        >
+          <Menu size={22} />
+          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#2C181B' }}>INZFYER Admin</span>
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="badge badge-pink" style={{ fontSize: '0.72rem' }}>
+            {activeTab}
+          </span>
+          <button 
+            onClick={onLogout} 
+            title="Logout" 
+            style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '0.35rem' }}
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Off-canvas Drawer Backdrop */}
+      {isMobileNavOpen && (
+        <div 
+          className="admin-drawer-backdrop" 
+          onClick={() => setIsMobileNavOpen(false)} 
+        />
+      )}
+
+      {/* Off-canvas Drawer */}
+      <aside className={`admin-drawer ${isMobileNavOpen ? 'open' : ''}`}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(224, 150, 137, 0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <img 
+              src={logoImg} 
+              alt="Logo" 
+              style={{ height: '36px', width: 'auto', borderRadius: '8px', objectFit: 'contain', padding: '2px 4px', background: '#fff', border: '1px solid rgba(224, 150, 137, 0.4)' }} 
+            />
+            <div>
+              <h3 className="brand-font" style={{ fontSize: '1.15rem', color: '#A63A4B', lineHeight: '1' }}>INZFYER</h3>
+              <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#8C2E3C', letterSpacing: '0.1em' }}>ADMIN PORTAL</span>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsMobileNavOpen(false)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5C4347', padding: '0.35rem' }}
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        {/* Drawer Nav Items */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flexGrow: 1 }}>
+          {sidebarItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsMobileNavOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: isActive ? 'linear-gradient(135deg, #A63A4B 0%, #8C2E3C 100%)' : 'transparent',
+                  color: isActive ? '#ffffff' : '#5C4347',
+                  fontSize: '0.92rem',
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Icon size={18} color={isActive ? '#ffffff' : '#A63A4B'} />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: isActive ? 'rgba(255, 255, 255, 0.25)' : '#F8D7D0',
+                    color: isActive ? '#ffffff' : '#8C2E3C'
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Drawer Logout Button */}
+        <div style={{ paddingTop: '1rem', borderTop: '1px solid rgba(224, 150, 137, 0.3)', marginTop: '1rem' }}>
+          <button
+            onClick={onLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              width: '100%',
+              padding: '0.75rem 1rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(254, 242, 242, 0.8)',
+              color: '#dc2626',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            <LogOut size={18} /> Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Desktop Sidebar Navigation - Glass UI */}
       <aside className="glass glass-card admin-sidebar" style={{
         padding: '1.75rem 1.25rem',
         background: 'rgba(255, 255, 255, 0.92)',
@@ -376,20 +516,20 @@ const AdminPanel = ({
       </aside>
 
       {/* Main Content Area */}
-      <div>
+      <div style={{ minWidth: 0, width: '100%' }}>
         {/* Top Header Row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div>
             <span className="badge badge-pink" style={{ marginBottom: '0.4rem' }}>
               <ShieldCheck size={14} /> Authenticated Admin Session
             </span>
-            <h1 className="brand-font" style={{ fontSize: '2.4rem', color: '#2C181B' }}>
+            <h1 className="brand-font" style={{ fontSize: 'clamp(1.6rem, 3vw, 2.4rem)', color: '#2C181B' }}>
               {activeTab} Management
             </h1>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.85rem', color: '#5C4347', fontWeight: 600 }}>Logged in as: admin@inzfyer.in</span>
+            <span style={{ fontSize: '0.82rem', color: '#5C4347', fontWeight: 600 }}>admin@inzfyer.in</span>
           </div>
         </div>
 
@@ -397,70 +537,70 @@ const AdminPanel = ({
         {activeTab === 'Dashboard' && (
           <div>
             {/* 4 Premium Glass Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               {/* Card 1: Total Products */}
-              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Total Products</span>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F8D7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A63A4B' }}>
-                    <Package size={20} />
+              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Products</span>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F8D7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A63A4B' }}>
+                    <Package size={18} />
                   </div>
                 </div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#2C181B' }}>{totalProducts}</div>
-                <span style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.4rem' }}>
-                  <TrendingUp size={14} /> Active catalog items
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2C181B' }}>{totalProducts}</div>
+                <span style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}>
+                  <TrendingUp size={12} /> Active items
                 </span>
               </div>
 
               {/* Card 2: Total Orders */}
-              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Total Orders</span>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F8D7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A63A4B' }}>
-                    <ShoppingCart size={20} />
+              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Orders</span>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F8D7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A63A4B' }}>
+                    <ShoppingCart size={18} />
                   </div>
                 </div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#2C181B' }}>{totalOrders}</div>
-                <span style={{ fontSize: '0.78rem', color: '#5C4347', fontWeight: 600, marginTop: '0.4rem', display: 'block' }}>
-                  Completed & pending orders
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#2C181B' }}>{totalOrders}</div>
+                <span style={{ fontSize: '0.72rem', color: '#5C4347', fontWeight: 600, marginTop: '0.25rem', display: 'block' }}>
+                  Recorded orders
                 </span>
               </div>
 
               {/* Card 3: Total Revenue */}
-              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Total Revenue</span>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F8D7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A63A4B' }}>
-                    <DollarSign size={20} />
+              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Revenue</span>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F8D7D0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A63A4B' }}>
+                    <DollarSign size={18} />
                   </div>
                 </div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#A63A4B' }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#A63A4B' }}>
                   ₹{totalRevenue.toLocaleString('en-IN')}
                 </div>
-                <span style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 600, marginTop: '0.4rem', display: 'block' }}>
-                  Gross sales earnings
+                <span style={{ fontSize: '0.72rem', color: '#047857', fontWeight: 600, marginTop: '0.25rem', display: 'block' }}>
+                  Gross earnings
                 </span>
               </div>
 
               {/* Card 4: Low Stock Alert */}
-              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Low Stock Items</span>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
-                    <AlertTriangle size={20} />
+              <div className="glass glass-card" style={{ background: 'rgba(255, 255, 255, 0.92)', padding: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C2E3C', textTransform: 'uppercase' }}>Low Stock</span>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d97706' }}>
+                    <AlertTriangle size={18} />
                   </div>
                 </div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: lowStockItems.length > 0 ? '#d97706' : '#047857' }}>
+                <div style={{ fontSize: '1.8rem', fontWeight: 800, color: lowStockItems.length > 0 ? '#d97706' : '#047857' }}>
                   {lowStockItems.length}
                 </div>
-                <span style={{ fontSize: '0.78rem', color: '#5C4347', fontWeight: 600, marginTop: '0.4rem', display: 'block' }}>
-                  {lowStockItems.length > 0 ? 'Requires immediate restock' : 'All stock levels healthy'}
+                <span style={{ fontSize: '0.72rem', color: '#5C4347', fontWeight: 600, marginTop: '0.25rem', display: 'block' }}>
+                  {lowStockItems.length > 0 ? 'Needs restock' : 'Stock healthy'}
                 </span>
               </div>
             </div>
 
-            {/* Recent Orders Log Table */}
-            <div className="glass glass-card" style={{ background: '#ffffff' }}>
+            {/* Recent Orders Log Table / Cards */}
+            <div className="glass glass-card" style={{ background: '#ffffff', padding: '1.25rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.25rem' }}>Recent Order Activity</h3>
               {salesHistory.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94757A' }}>
@@ -468,32 +608,53 @@ const AdminPanel = ({
                   <p style={{ fontSize: '0.95rem' }}>No checkout transactions recorded yet.</p>
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
-                        <th style={{ padding: '0.85rem' }}>Order ID</th>
-                        <th style={{ padding: '0.85rem' }}>Customer</th>
-                        <th style={{ padding: '0.85rem' }}>Payment</th>
-                        <th style={{ padding: '0.85rem' }}>Total Amount</th>
-                        <th style={{ padding: '0.85rem' }}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesHistory.slice(-5).reverse().map((sale, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #F8D7D0' }}>
-                          <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{sale.orderId || `ORD-${idx+1001}`}</td>
-                          <td style={{ padding: '0.85rem' }}>{sale.customerName || 'Boutique Guest'}</td>
-                          <td style={{ padding: '0.85rem', textTransform: 'uppercase' }}>{sale.paymentMethod || 'UPI'}</td>
-                          <td style={{ padding: '0.85rem', fontWeight: 700, color: '#2C181B' }}>₹{sale.total?.toLocaleString('en-IN')}</td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <span className="badge badge-success"><CheckCircle size={12} /> Paid & Processed</span>
-                          </td>
+                <>
+                  {/* Desktop Table View */}
+                  <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
+                          <th style={{ padding: '0.85rem' }}>Order ID</th>
+                          <th style={{ padding: '0.85rem' }}>Customer</th>
+                          <th style={{ padding: '0.85rem' }}>Payment</th>
+                          <th style={{ padding: '0.85rem' }}>Total Amount</th>
+                          <th style={{ padding: '0.85rem' }}>Status</th>
                         </tr>
+                      </thead>
+                      <tbody>
+                        {salesHistory.slice(-5).reverse().map((sale, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #F8D7D0' }}>
+                            <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{sale.orderId || `ORD-${idx+1001}`}</td>
+                            <td style={{ padding: '0.85rem' }}>{sale.customerName || 'Boutique Guest'}</td>
+                            <td style={{ padding: '0.85rem', textTransform: 'uppercase' }}>{sale.paymentMethod || 'UPI'}</td>
+                            <td style={{ padding: '0.85rem', fontWeight: 700, color: '#2C181B' }}>₹{sale.total?.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '0.85rem' }}>
+                              <span className="badge badge-success"><CheckCircle size={12} /> Paid & Processed</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards View */}
+                  <div className="admin-mobile-cards-view">
+                    <div className="admin-card-list">
+                      {salesHistory.slice(-5).reverse().map((sale, idx) => (
+                        <div key={idx} className="admin-card-item">
+                          <div className="admin-card-row">
+                            <span style={{ fontWeight: 700, color: '#A63A4B' }}>{sale.orderId || `ORD-${idx+1001}`}</span>
+                            <span className="badge badge-success"><CheckCircle size={12} /> Paid</span>
+                          </div>
+                          <div className="admin-card-row" style={{ fontSize: '0.88rem' }}>
+                            <span style={{ color: '#2C181B', fontWeight: 600 }}>{sale.customerName || 'Boutique Guest'}</span>
+                            <span style={{ fontWeight: 800, color: '#2C181B' }}>₹{sale.total?.toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -514,9 +675,9 @@ const AdminPanel = ({
 
         {/* VIEW 3: PRODUCTS TAB */}
         {activeTab === 'Products' && (
-          <div className="glass glass-card" style={{ background: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', gap: '1rem', flex: 1, maxWidth: '480px' }}>
+          <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', flex: '1 1 220px', maxWidth: '480px' }}>
                 <div style={{ position: 'relative', width: '100%' }}>
                   <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94757A' }} />
                   <input
@@ -529,12 +690,13 @@ const AdminPanel = ({
                 </div>
               </div>
 
-              <button onClick={() => handleSaveProductClick()} className="btn btn-primary">
+              <button onClick={() => handleSaveProductClick()} className="btn btn-primary" style={{ flexShrink: 0 }}>
                 <Plus size={18} /> Add Product
               </button>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            {/* Desktop Table View */}
+            <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
@@ -593,21 +755,72 @@ const AdminPanel = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Responsive Cards View */}
+            <div className="admin-mobile-cards-view">
+              <div className="admin-card-list">
+                {products
+                  .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((p) => (
+                    <div key={p.id} className="admin-card-item">
+                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <ResponsiveImage src={p.imageUrl} alt={p.name} style={{ width: '54px', height: '54px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                        <div style={{ minWidth: 0, flexGrow: 1 }}>
+                          <div style={{ fontWeight: 700, color: '#2C181B', fontSize: '0.95rem', overflowWrap: 'break-word' }}>{p.name}</div>
+                          <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#5C4347' }}>{p.sku || `INZ-${p.id}`}</div>
+                        </div>
+                      </div>
+
+                      <div className="admin-card-row" style={{ fontSize: '0.85rem' }}>
+                        <span style={{ color: '#8C2E3C', fontWeight: 600 }}>{p.categoryName}</span>
+                        <span style={{ fontWeight: 800, color: '#A63A4B', fontSize: '1.05rem' }}>
+                          ₹{p.price.toLocaleString('en-IN')}
+                          {p.sale_price && (
+                            <span style={{ fontSize: '0.75rem', color: '#047857', marginLeft: '0.35rem' }}>(Sale: ₹{p.sale_price})</span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="admin-card-row">
+                        <span className={`badge ${p.stock < 5 ? 'badge-warning' : 'badge-pink'}`}>
+                          {p.stock} units in stock
+                        </span>
+                        <button 
+                          onClick={() => handleToggleProductActive(p.id, p.is_active)}
+                          className={`badge ${p.is_active ? 'badge-success' : 'badge-warning'}`}
+                          style={{ cursor: 'pointer', border: 'none', background: p.is_active ? '#dcfce7' : '#fee2e2', color: p.is_active ? '#166534' : '#991b1b' }}
+                        >
+                          {p.is_active ? 'Active' : 'Disabled'}
+                        </button>
+                      </div>
+
+                      <div className="admin-card-actions">
+                        <button onClick={() => handleSaveProductClick(p)} className="btn btn-ghost" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Edit size={14} /> Edit
+                        </button>
+                        <button onClick={() => handleDeleteProduct(p)} className="btn btn-ghost" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* VIEW 4: ORDERS TAB */}
         {activeTab === 'Orders' && (
-          <div className="glass glass-card" style={{ background: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B' }}>Customer Orders Log</h3>
-              <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem', width: '100%' }}>
                 {['All', 'PENDING_PAYMENT', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'].map(f => (
                   <button 
                     key={f}
                     onClick={() => setOrderFilter(f)}
                     className={`btn ${orderFilter === f ? 'btn-primary' : 'btn-ghost'}`}
-                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '8px', whiteSpace: 'nowrap' }}
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0 }}
                   >
                     {f.replace('_', ' ')}
                   </button>
@@ -615,7 +828,8 @@ const AdminPanel = ({
               </div>
             </div>
             
-            <div style={{ overflowX: 'auto' }}>
+            {/* Desktop Table View */}
+            <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
@@ -667,14 +881,61 @@ const AdminPanel = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Responsive Cards View */}
+            <div className="admin-mobile-cards-view">
+              <div className="admin-card-list">
+                {salesHistory
+                  .filter(order => orderFilter === 'All' || order.order_status === orderFilter || order.payment_status === orderFilter)
+                  .slice().reverse().map((order, idx) => (
+                    <div 
+                      key={order.id || idx} 
+                      className="admin-card-item"
+                      onClick={() => setSelectedOrder(order)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className="admin-card-row">
+                        <span style={{ fontWeight: 700, color: '#A63A4B', fontSize: '0.95rem' }}>
+                          {order.order_number || order.orderId || `ORD-${idx+1001}`}
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: '#5C4347' }}>
+                          {order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : (order.timestamp || 'Today')}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '0.85rem', color: '#2C181B' }}>
+                        <strong>{order.customer_name || order.customer?.name || 'Boutique Guest'}</strong>
+                        <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
+                          {order.city || (order.customer && order.customer.city)} - {order.pincode || (order.customer && order.customer.pincode)}
+                        </div>
+                      </div>
+
+                      <div className="admin-card-row">
+                        <span style={{ fontWeight: 800, color: '#2C181B', fontSize: '1.05rem' }}>
+                          ₹{(order.final_total || order.total)?.toLocaleString('en-IN')}
+                        </span>
+                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.order_status) ? 'badge-warning' : 'badge-pink'}`}>
+                          {order.order_status || order.orderStatus || 'Pending'}
+                        </span>
+                      </div>
+
+                      <div className="admin-card-actions">
+                        <button className="btn btn-primary" style={{ width: '100%', padding: '0.45rem', fontSize: '0.82rem' }}>
+                          View Order Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* VIEW 8: CATEGORIES TAB */}
         {activeTab === 'Categories' && (
-          <div className="glass glass-card" style={{ background: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', gap: '1rem', flex: 1, maxWidth: '480px' }}>
+          <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.75rem', flex: '1 1 220px', maxWidth: '480px' }}>
                 <div style={{ position: 'relative', width: '100%' }}>
                   <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94757A' }} />
                   <input
@@ -687,12 +948,13 @@ const AdminPanel = ({
                 </div>
               </div>
 
-              <button onClick={() => handleSaveCategoryClick()} className="btn btn-primary">
+              <button onClick={() => handleSaveCategoryClick()} className="btn btn-primary" style={{ flexShrink: 0 }}>
                 <Plus size={18} /> Add Category
               </button>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
+            {/* Desktop Table View */}
+            <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
@@ -731,14 +993,51 @@ const AdminPanel = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Responsive Cards View */}
+            <div className="admin-mobile-cards-view">
+              <div className="admin-card-list">
+                {categories
+                  .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((c) => (
+                    <div key={c.id} className="admin-card-item">
+                      <div className="admin-card-row">
+                        <span style={{ fontWeight: 700, color: '#2C181B', fontSize: '0.95rem' }}>{c.name}</span>
+                        <button 
+                          onClick={() => handleToggleCategoryActive(c.id, c.is_active ?? c.isActive ?? true)}
+                          className={`badge ${(c.is_active ?? c.isActive ?? true) ? 'badge-success' : 'badge-warning'}`}
+                          style={{ cursor: 'pointer', border: 'none', background: (c.is_active ?? c.isActive ?? true) ? '#dcfce7' : '#fee2e2', color: (c.is_active ?? c.isActive ?? true) ? '#166534' : '#991b1b' }}
+                        >
+                          {(c.is_active ?? c.isActive ?? true) ? 'Active' : 'Disabled'}
+                        </button>
+                      </div>
+
+                      <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#5C4347' }}>
+                        /{c.slug}
+                      </div>
+
+                      <div className="admin-card-actions">
+                        <button onClick={() => handleSaveCategoryClick(c)} className="btn btn-ghost" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Edit size={14} /> Edit
+                        </button>
+                        <button onClick={() => handleDeleteCategory(c)} className="btn btn-ghost" style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* VIEW 5: CUSTOMERS TAB */}
         {activeTab === 'Customers' && (
-          <div className="glass glass-card" style={{ background: '#ffffff' }}>
+          <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.25rem' }}>Boutique Customer Profiles</h3>
-            <div style={{ overflowX: 'auto' }}>
+            
+            {/* Desktop Table View */}
+            <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
@@ -770,12 +1069,40 @@ const AdminPanel = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Responsive Cards View */}
+            <div className="admin-mobile-cards-view">
+              <div className="admin-card-list">
+                {customers.map((c) => (
+                  <div key={c.id} className="admin-card-item">
+                    <div className="admin-card-row">
+                      <span style={{ fontWeight: 700, color: '#2C181B', fontSize: '0.95rem' }}>{c.name}</span>
+                      {c.vip ? (
+                        <span className="badge badge-purple"><Sparkles size={12} /> VIP</span>
+                      ) : (
+                        <span className="badge badge-pink">Regular</span>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: '#5C4347' }}>
+                      <div>{c.email}</div>
+                      <div>{c.phone}</div>
+                    </div>
+
+                    <div className="admin-card-row" style={{ paddingTop: '0.35rem', borderTop: '1px solid #fdf2f8' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>{c.ordersCount} Orders</span>
+                      <span style={{ fontWeight: 800, color: '#A63A4B', fontSize: '1rem' }}>₹{c.totalSpent.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* VIEW 6: INVENTORY TAB (STOCK IN, STOCK OUT, LOW STOCK ALERTS) */}
         {activeTab === 'Inventory' && (
-          <div className="glass glass-card" style={{ background: '#ffffff', padding: '1.75rem' }}>
+          <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#2C181B' }}>
@@ -800,11 +1127,11 @@ const AdminPanel = ({
                   <AlertTriangle size={20} />
                   <span>Low Stock Warning Alert ({lowStockItems.length} Products Require Restock)</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.85rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
                   {lowStockItems.map(item => (
-                    <div key={item.id} style={{ background: '#ffffff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2C181B' }}>{item.name}</div>
+                    <div key={item.id} style={{ background: '#ffffff', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2C181B', overflowWrap: 'break-word' }}>{item.name}</div>
                         <span style={{ fontSize: '0.78rem', color: '#d97706', fontWeight: 700 }}>Only {item.stock} units left!</span>
                       </div>
                       <button 
@@ -816,7 +1143,7 @@ const AdminPanel = ({
                            showToast('Stock level updated!', 'success');
                         }}
                         className="btn btn-primary"
-                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}
+                        style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', flexShrink: 0 }}
                       >
                         +10 Restock
                       </button>
@@ -826,8 +1153,8 @@ const AdminPanel = ({
               </div>
             )}
 
-            {/* Main Stock Table with Stock In & Stock Out Actions */}
-            <div style={{ overflowX: 'auto' }}>
+            {/* Desktop Table View */}
+            <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
@@ -919,12 +1246,90 @@ const AdminPanel = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Responsive Cards View */}
+            <div className="admin-mobile-cards-view">
+              <div className="admin-card-list">
+                {products.map((p) => (
+                  <div key={p.id} className="admin-card-item">
+                    <div className="admin-card-row">
+                      <span style={{ fontWeight: 700, color: '#2C181B', fontSize: '0.95rem' }}>{p.name}</span>
+                      <span className={`badge ${p.stock < 5 ? 'badge-warning' : 'badge-success'}`}>
+                        {p.stock} units
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: '#5C4347' }}>
+                      {p.sku || `INZ-${p.id}`}
+                    </div>
+
+                    <div className="admin-card-row" style={{ paddingTop: '0.4rem', borderTop: '1px solid #fdf2f8', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857' }}>In:</span>
+                        <button 
+                          onClick={async () => {
+                            const newStock = p.stock + 1;
+                            setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                            const token = (await supabase.auth.getSession()).data.session?.access_token;
+                            await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
+                          }}
+                          className="btn btn-ghost"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', color: '#047857', borderColor: '#047857' }}
+                        >
+                          +1
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const newStock = p.stock + 10;
+                            setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                            const token = (await supabase.auth.getSession()).data.session?.access_token;
+                            await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
+                          }}
+                          className="btn btn-primary"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', background: '#047857', borderColor: '#047857' }}
+                        >
+                          +10
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626' }}>Out:</span>
+                        <button 
+                          onClick={async () => {
+                            const newStock = Math.max(0, p.stock - 1);
+                            setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                            const token = (await supabase.auth.getSession()).data.session?.access_token;
+                            await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
+                          }}
+                          className="btn btn-ghost"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', color: '#dc2626', borderColor: '#dc2626' }}
+                        >
+                          -1
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            const newStock = Math.max(0, p.stock - 5);
+                            setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, stock: newStock } : prod));
+                            const token = (await supabase.auth.getSession()).data.session?.access_token;
+                            await axios.post('/api/admin/action', { action: 'updateStock', payload: { id: p.id, stock: newStock } }, { headers: { Authorization: `Bearer ${token}` } });
+                          }}
+                          className="btn btn-ghost"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.78rem', color: '#dc2626', borderColor: '#dc2626' }}
+                        >
+                          -5
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* VIEW 7: SETTINGS TAB */}
         {activeTab === 'Settings' && (
-          <div className="glass glass-card" style={{ background: '#ffffff', maxWidth: '640px' }}>
+          <div className="glass glass-card" style={{ background: '#ffffff', maxWidth: '640px', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.5rem' }}>Boutique Operational Settings</h3>
             <form onSubmit={async (e) => { 
               e.preventDefault(); 
@@ -958,7 +1363,7 @@ const AdminPanel = ({
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
                   <label className="form-label">Free Shipping Threshold (₹)</label>
                   <input 
@@ -977,7 +1382,7 @@ const AdminPanel = ({
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
                   <label className="form-label">Tamil Nadu Shipping Rate (₹)</label>
                   <input 

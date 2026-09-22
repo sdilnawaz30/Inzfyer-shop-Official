@@ -103,15 +103,15 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
     <div className="modal-overlay" style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '12px'
     }}>
-      <div className="modal-content animate-fade-in glass glass-card" style={{
-        background: '#ffffff', width: '100%', maxWidth: '800px',
-        maxHeight: '90vh', overflowY: 'auto', borderRadius: '20px', padding: 0
+      <div className="modal-card animate-fade-in glass glass-card" style={{
+        background: '#ffffff', width: 'calc(100vw - 24px)', maxWidth: '800px',
+        maxHeight: 'calc(100vh - 24px)', overflowY: 'auto', borderRadius: '20px', padding: 0
       }}>
         
         {/* Header */}
-        <div style={{ padding: '1.5rem 2rem', borderBottom: '1px solid #fce7f3', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
+        <div style={{ padding: 'clamp(1rem, 2.5vw, 1.5rem)', borderBottom: '1px solid #fce7f3', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#fff', zIndex: 10 }}>
           <div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: '#1f2937', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               Order {order.order_number}
@@ -120,7 +120,7 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
               Placed on {new Date(order.created_at).toLocaleString('en-IN')}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button onClick={handleDownloadInvoice} className="btn btn-ghost" style={{ padding: '0.5rem', color: '#db2777' }} title="Download Invoice">
               <Download size={20} />
             </button>
@@ -130,7 +130,7 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
           </div>
         </div>
 
-        <div style={{ padding: '2rem' }}>
+        <div style={{ padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
           {/* Top Info Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
             
@@ -187,8 +187,8 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
           {isLoading ? (
             <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Loading items...</div>
           ) : (
-            <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden', marginBottom: '2rem' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '12px', overflowX: 'auto', marginBottom: '2rem' }}>
+              <table style={{ width: '100%', minWidth: '380px', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#4b5563' }}>
                     <th style={{ padding: '0.75rem 1rem' }}>Product</th>
@@ -247,7 +247,8 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1f2937', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Clock size={18} /> Fulfillment Timeline
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', padding: '1rem 0' }}>
+          <div style={{ overflowX: 'auto', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', padding: '1rem 0', minWidth: '320px' }}>
              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '4px', background: '#e5e7eb', zIndex: 0, transform: 'translateY(-50%)' }}></div>
              
              {['PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED'].map((step, index) => {
@@ -274,6 +275,7 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
                  </div>
                )
              })}
+            </div>
           </div>
           {(order.order_status === 'CANCELLED' || order.order_status === 'REFUNDED') && (
             <div style={{ marginTop: '1rem', padding: '1rem', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', textAlign: 'center', fontWeight: 600 }}>

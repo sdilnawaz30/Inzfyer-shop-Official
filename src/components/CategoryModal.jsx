@@ -188,7 +188,7 @@ const CategoryModal = ({ isOpen, onClose, onSave, categoryToEdit, showToast }) =
       <div 
         className="modal-card animate-fade-in" 
         onClick={(e) => e.stopPropagation()} 
-        style={{ maxWidth: '500px', width: '90%', padding: '2rem', background: '#fff', borderRadius: '24px', maxHeight: '90vh', overflowY: 'auto' }}
+        style={{ maxWidth: '500px', width: 'calc(100vw - 24px)', padding: 'clamp(1rem, 3vw, 2rem)', background: '#fff', borderRadius: '24px', maxHeight: 'calc(100vh - 24px)', overflowY: 'auto' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #F8D7D0', paddingBottom: '0.85rem' }}>
           <div>

@@ -176,14 +176,14 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
       <div className="checkout-layout">
 
         {/* Left Column (Forms) */}
-        <div>
+        <div style={{ minWidth: 0, width: '100%' }}>
           {step === 'shipping' && (
-            <div className="glass glass-card" style={{ background: '#ffffff', padding: '2rem' }}>
+            <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1.25rem, 3vw, 2rem)' }}>
               <h2 className="brand-font" style={{ fontSize: '1.8rem', color: '#1f2937', marginBottom: '1.5rem', borderBottom: '2px solid #fce7f3', paddingBottom: '0.75rem' }}>
                 Shipping Details
               </h2>
-              <form onSubmit={handleShippingSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              <form id="shipping-form" onSubmit={handleShippingSubmit}>
+                <div className="checkout-field-row-2">
                   <div>
                     <label className="form-label">Full Name *</label>
                     <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Ananya Sharma" />
@@ -209,7 +209,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                   <input type="text" value={formData.address2} onChange={(e) => setFormData({ ...formData, address2: e.target.value })} placeholder="Street Name, Area, Landmark" />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div className="checkout-field-row-3">
                   <div>
                     <label className="form-label">City *</label>
                     <input type="text" required value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
@@ -235,9 +235,12 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                   </div>
                 </div>
 
-                <button type="submit" disabled={isCheckingShipping || shippingRate === null} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', opacity: (isCheckingShipping || shippingRate === null) ? 0.7 : 1 }}>
-                  Continue to Payment
-                </button>
+                {/* Desktop Submit Button */}
+                <div className="desktop-only" style={{ marginTop: '1.5rem' }}>
+                  <button type="submit" disabled={isCheckingShipping || shippingRate === null} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', opacity: (isCheckingShipping || shippingRate === null) ? 0.7 : 1 }}>
+                    Continue to Payment
+                  </button>
+                </div>
               </form>
             </div>
           )}
@@ -268,20 +271,20 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
         </div>
 
         {/* Right Column (Order Summary) */}
-        <div className="glass glass-card" style={{ background: '#ffffff', position: 'sticky', top: '100px' }}>
+        <div className="glass glass-card checkout-summary-sticky" style={{ background: '#ffffff', padding: 'clamp(1.25rem, 3vw, 2rem)', minWidth: 0 }}>
           <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1f2937', marginBottom: '1.25rem', borderBottom: '1px solid #fce7f3', paddingBottom: '0.75rem' }}>
             Order Summary
           </h3>
 
           <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1.25rem' }}>
             {cart.map(item => (
-              <div key={item.id} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                <ResponsiveImage src={item.image} alt={item.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '10px', background: '#fdf2f8' }} />
-                <div style={{ flexGrow: 1 }}>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.2rem' }}>{item.name}</h4>
+              <div key={item.id} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
+                <ResponsiveImage src={item.image} alt={item.name} style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '10px', background: '#fdf2f8', flexShrink: 0 }} />
+                <div style={{ flexGrow: 1, minWidth: 0 }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.2rem', overflowWrap: 'break-word' }}>{item.name}</h4>
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>Qty: {item.qty}</div>
                 </div>
-                <div style={{ fontWeight: 700, color: '#db2777', fontSize: '0.95rem' }}>
+                <div style={{ fontWeight: 700, color: '#db2777', fontSize: '0.95rem', flexShrink: 0 }}>
                   ₹{(item.price * item.qty).toLocaleString('en-IN')}
                 </div>
               </div>
@@ -319,8 +322,15 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
               ₹{total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </span>
           </div>
-          <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', marginBottom: '1rem' }}>
             Prices are inclusive of all taxes
+          </div>
+
+          {/* Mobile Submit Button (Placed directly under Order Summary on Mobile) */}
+          <div className="mobile-only" style={{ marginTop: '1.25rem' }}>
+            <button form="shipping-form" type="submit" disabled={isCheckingShipping || shippingRate === null} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', opacity: (isCheckingShipping || shippingRate === null) ? 0.7 : 1 }}>
+              Continue to Payment
+            </button>
           </div>
         </div>
       </div>
