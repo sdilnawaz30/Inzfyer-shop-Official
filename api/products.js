@@ -34,8 +34,8 @@ export default async function handler(req, res) {
       .groupBy(schema.categories.id)
       .orderBy(asc(schema.categories.name));
 
-      // Set cache headers for categories (cache for 1 hour, stale-while-revalidate for 1 day)
-      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      // Ensure real-time fresh data for categories
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
       return res.status(200).json({
         success: true,
