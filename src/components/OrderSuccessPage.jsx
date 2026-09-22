@@ -116,14 +116,19 @@ const OrderSuccessPage = ({ setActivePage }) => {
           {isPaid ? 'Order Placed Successfully' : 'Payment Processing'}
         </h1>
         
-        <p style={{ color: '#6b7280', fontSize: '1.05rem', marginBottom: '1rem' }}>
+        <p style={{ color: '#6b7280', fontSize: '1.05rem', marginBottom: '0.5rem' }}>
           Thank you for your order, <strong style={{ color: '#db2777' }}>{order.customerName}</strong>!
         </p>
 
         {isPaid && (
-          <p style={{ color: '#047857', fontSize: '1.1rem', fontWeight: 500, marginBottom: '2rem', padding: '0.75rem 1.5rem', background: '#ecfdf5', borderRadius: '8px', display: 'inline-block' }}>
-            Your order will be dispatched within 1–4 days.
-          </p>
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', color: '#1f2937', fontWeight: 700, marginBottom: '1rem' }}>
+              Order ID: #{order.orderNumber}
+            </h2>
+            <p style={{ color: '#047857', fontSize: '1.1rem', fontWeight: 500, padding: '0.75rem 1.5rem', background: '#ecfdf5', borderRadius: '8px', display: 'inline-block', margin: 0 }}>
+              Your order will be delivered within 1–4 days.
+            </p>
+          </div>
         )}
 
         {!isPaid && (
