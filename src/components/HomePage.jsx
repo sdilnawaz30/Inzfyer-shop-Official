@@ -2,17 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowRight, Heart, Gift, ShoppingBag, Sparkles, Star, Package, Coffee, Bookmark, Smile, Key, Truck, Lock, Camera } from 'lucide-react';
 import heroImg from '../assets/new hero.png';
 import ResponsiveImage from './ResponsiveImage';
-import { fetchFeaturedProducts, fetchRecentProducts } from '../utils/productQueries';
+import { fetchFeaturedProducts, fetchRecentProducts, fetchCategories } from '../utils/productQueries';
 import './HomePage.css';
-
-const categories = [
-  { title: 'Plushies & Toys', icon: Package, count: '12 items' },
-  { title: 'Gift Sets', icon: Gift, count: '8 items' },
-  { title: 'Charms', icon: Key, count: '15 items' },
-  { title: 'Ceramics', icon: Coffee, count: '6 items' },
-  { title: 'Stationery', icon: Bookmark, count: '10 items' },
-  { title: 'Keepsakes', icon: Smile, count: '7 items' },
-];
 
 const highlights = [
   { label: 'Delivery in 5–7 Days', icon: Truck },
@@ -23,20 +14,23 @@ const highlights = [
 const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSelectProduct, setSelectedCategory }) => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [recentProducts, setRecentProducts] = useState([]);
+  const [storeCategories, setStoreCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [featured, recent] = await Promise.all([
+        const [featured, recent, categoriesData] = await Promise.all([
           fetchFeaturedProducts(4),
-          fetchRecentProducts(4)
+          fetchRecentProducts(4),
+          fetchCategories()
         ]);
         setFeaturedProducts(featured);
         setRecentProducts(recent);
+        setStoreCategories(categoriesData || []);
       } catch (error) {
-        console.error("Failed to load home page products", error);
+        console.error("Failed to load home page data", error);
       } finally {
         setIsLoading(false);
       }
@@ -62,23 +56,33 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
         </div>
       </section>
 
-      <section className="store-section">
-        <div className="section-heading"><span>Handpicked collections</span><h2>Find a little <i>magic</i></h2><p>Thoughtful picks for every tiny celebration.</p></div>
-        <div className="category-grid">
-          {categories.map(({ title, icon: Icon, count }) => (
-            <button 
-              className="category-card" 
-              key={title} 
-              onClick={() => { 
-                if(setSelectedCategory) setSelectedCategory(title); 
-                setActivePage('shop'); 
-              }}
-            >
-              <span><Icon size={27} /></span><b>{title}</b><small>{count}</small>
-            </button>
-          ))}
-        </div>
-      </section>
+      {storeCategories && storeCategories.length > 0 && (
+        <section className="store-section">
+          <div className="section-heading"><span>Handpicked collections</span><h2>Find a little <i>magic</i></h2><p>Thoughtful picks for every tiny celebration.</p></div>
+          <div className="category-grid">
+            {storeCategories.map((cat) => (
+              <button 
+                className="category-card" 
+                key={cat.id} 
+                onClick={() => { 
+                  if(setSelectedCategory) setSelectedCategory(cat.name); 
+                  setActivePage('shop'); 
+                }}
+              >
+                <span>
+                  {cat.imageUrl ? (
+                    <img src={cat.imageUrl} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '19px' }} />
+                  ) : (
+                    <Package size={27} />
+                  )}
+                </span>
+                <b>{cat.name}</b>
+                <small>{cat.productCount || 0} {cat.productCount === 1 ? 'item' : 'items'}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
 
 

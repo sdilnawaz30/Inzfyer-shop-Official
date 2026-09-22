@@ -1,6 +1,6 @@
 import { getDb } from '../src/db/index.js';
 import * as schema from '../src/db/schema.js';
-import { eq, and, or, ilike, lte, gt, desc, asc, ne, inArray } from 'drizzle-orm';
+import { eq, and, or, ilike, lte, gt, desc, asc, ne, inArray, sql } from 'drizzle-orm';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -22,10 +22,16 @@ export default async function handler(req, res) {
         id: schema.categories.id,
         name: schema.categories.name,
         slug: schema.categories.slug,
-        imageUrl: schema.categories.imageUrl
+        imageUrl: schema.categories.imageUrl,
+        productCount: sql`count(${schema.products.id})::int`
       })
       .from(schema.categories)
+      .leftJoin(schema.products, and(
+        eq(schema.products.categoryId, schema.categories.id),
+        eq(schema.products.isActive, true)
+      ))
       .where(eq(schema.categories.isActive, true))
+      .groupBy(schema.categories.id)
       .orderBy(asc(schema.categories.name));
 
       // Set cache headers for categories (cache for 1 hour, stale-while-revalidate for 1 day)
