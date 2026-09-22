@@ -104,7 +104,7 @@ const AdminPanel = ({
 
   useEffect(() => {
     fetchAdminData();
-  }, [onLogout, showToast]);
+  }, []);
 
   const handleSaveProductClick = (product = null) => {
     setEditingProduct(product);

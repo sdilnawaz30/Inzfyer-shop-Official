@@ -124,9 +124,9 @@ function App() {
     localStorage.setItem('inzfyer-wishlist', JSON.stringify(wishlist));
   }, [wishlist]);
 
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
-  };
+  }, []);
 
   // Cart operations
   const handleAddToCart = useCallback((productToAdd) => {
