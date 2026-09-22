@@ -24,7 +24,8 @@ const orderSchema = z.object({
     city: z.string().min(2, "City is required"),
     state: z.string().min(2, "State is required"),
     pincode: z.string().regex(/^[0-9]{6}$/, "Invalid pincode"),
-  })
+  }),
+  giftWrapping: z.boolean().optional().default(false)
 });
 
 export default async function handler(req, res) {
@@ -38,7 +39,7 @@ export default async function handler(req, res) {
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid input', errors: parsed.error.errors });
     }
-    const { items, customerDetails, idempotencyKey } = parsed.data;
+    const { items, customerDetails, idempotencyKey, giftWrapping } = parsed.data;
 
     const db = getDb();
 
@@ -133,7 +134,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: shippingResult.error || 'Invalid pincode for shipping' });
     }
     const shippingFee = shippingResult.rate;
-    const totalAmount = subtotal - discount + shippingFee;
+    const giftWrappingCharge = giftWrapping ? 20 : 0;
+    const totalAmount = subtotal - discount + shippingFee + giftWrappingCharge;
 
     const orderNumber = `INZ-${Math.floor(100000 + Math.random() * 900000)}`;
     const fullAddress = `${customerDetails.address1}${customerDetails.address2 ? ', ' + customerDetails.address2 : ''}, ${customerDetails.city}, ${customerDetails.state} - ${customerDetails.pincode}`;
@@ -206,6 +208,8 @@ export default async function handler(req, res) {
         sgstAmount: totalSgst.toFixed(2),
         igstAmount: totalIgst.toFixed(2),
         baseSubtotal: baseSubtotal.toFixed(2),
+        giftWrapping: giftWrapping,
+        giftWrappingCharge: giftWrappingCharge.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
         paymentStatus: 'PENDING',
         orderStatus: 'PENDING_PAYMENT',

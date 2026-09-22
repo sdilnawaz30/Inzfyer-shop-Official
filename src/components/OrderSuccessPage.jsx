@@ -158,6 +158,12 @@ const OrderSuccessPage = ({ setActivePage }) => {
               <span style={{ color: '#6b7280', display: 'block', fontSize: '0.85rem' }}>Total Paid</span>
               <strong style={{ color: '#db2777' }}>₹{Number(order.finalTotal).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</strong>
             </div>
+            {order.giftWrappingCharge > 0 && (
+              <div>
+                <span style={{ color: '#db2777', display: 'block', fontSize: '0.85rem' }}>Gift Wrapping</span>
+                <strong style={{ color: '#db2777' }}>₹{Number(order.giftWrappingCharge).toLocaleString('en-IN')}</strong>
+              </div>
+            )}
           </div>
 
           {/* Items Table */}

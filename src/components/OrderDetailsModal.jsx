@@ -225,6 +225,12 @@ const OrderDetailsModal = ({ order, isOpen, onClose, onStatusChange, showToast }
                   <span>Shipping</span>
                   <span>₹{Number(order.shipping_charge).toLocaleString('en-IN')}</span>
                 </div>
+                {Number(order.gift_wrapping_charge) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#db2777' }}>
+                    <span>Gift Wrapping</span>
+                    <span>₹{Number(order.gift_wrapping_charge).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 {Number(order.discount) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#059669' }}>
                     <span>Discount</span>

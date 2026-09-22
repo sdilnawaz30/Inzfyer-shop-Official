@@ -16,6 +16,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
   const [shippingStateName, setShippingStateName] = useState('');
   const [shippingError, setShippingError] = useState('');
   const [isCheckingShipping, setIsCheckingShipping] = useState(false);
+  const [isGiftWrapping, setIsGiftWrapping] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -42,8 +43,9 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
   const discount = appliedPromo ? subtotal * 0.1 : 0;
+  const giftWrappingCharge = isGiftWrapping ? 20 : 0;
 
-  const total = subtotal - discount + (shippingRate || 0);
+  const total = subtotal - discount + (shippingRate || 0) + giftWrappingCharge;
 
   useEffect(() => {
     fetch('/api/shipping-config')
@@ -130,7 +132,8 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
         subtotal: cleanSubtotal,
         items: cart.map(item => ({ id: item.id, qty: item.qty })),
         customerDetails: { ...existingFields, phone: cleanPhone },
-        idempotencyKey
+        idempotencyKey,
+        giftWrapping: isGiftWrapping
       });
 
       if (createOrderRes.data.success) {
@@ -272,12 +275,26 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                   </div>
                 </div>
 
-                {/* Desktop Submit Button */}
-                <div className="desktop-only" style={{ marginTop: '1.5rem' }}>
-                  <button type="submit" disabled={isCheckingShipping || shippingRate === null} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', opacity: (isCheckingShipping || shippingRate === null) ? 0.7 : 1 }}>
-                    Continue to Payment
-                  </button>
+                {/* Gift Wrapping Toggle */}
+                <div style={{ marginBottom: '2rem', padding: '1rem', background: '#fdf2f8', borderRadius: '12px', border: '1px solid #fce7f3' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={isGiftWrapping}
+                      onChange={(e) => setIsGiftWrapping(e.target.checked)}
+                      style={{ width: '18px', height: '18px', accentColor: '#db2777' }}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#1f2937', fontSize: '0.95rem' }}>Add Gift Wrapping — ₹20</div>
+                      <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.1rem' }}>Make your order extra special with gift wrapping.</div>
+                    </div>
+                  </label>
                 </div>
+
+                {/* Desktop Submit Button (Hidden on Mobile, handled by bottom sticky block) */}
+                <button form="shipping-form" type="submit" disabled={isCheckingShipping || shippingRate === null} className="btn btn-primary desktop-only" style={{ width: '100%', padding: '1.1rem', fontSize: '1.05rem', opacity: (isCheckingShipping || shippingRate === null) ? 0.7 : 1 }}>
+                  Continue to Payment
+                </button>
               </form>
             </div>
           )}
@@ -351,6 +368,13 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                     : `₹${shippingRate} (${shippingStateName === 'Tamil Nadu' ? 'TN' : 'Other'})`}
               </span>
             </div>
+            
+            {isGiftWrapping && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#db2777' }}>
+                <span>Gift Wrapping</span>
+                <span style={{ fontWeight: 600 }}>₹20</span>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
