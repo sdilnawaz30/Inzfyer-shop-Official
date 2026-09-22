@@ -332,7 +332,8 @@ const AdminPanel = ({
       )}
 
       {/* Off-canvas Drawer */}
-      <aside className={`admin-drawer ${isMobileNavOpen ? 'open' : ''}`}>
+      {isMobileNavOpen && (
+        <aside className="admin-drawer open">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(224, 150, 137, 0.3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <img 
@@ -424,6 +425,7 @@ const AdminPanel = ({
           </button>
         </div>
       </aside>
+      )}
 
       {/* Desktop Sidebar Navigation - Glass UI */}
       <aside className="glass glass-card admin-sidebar" style={{

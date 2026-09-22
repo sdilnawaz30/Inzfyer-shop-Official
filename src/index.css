@@ -889,7 +889,11 @@ input:focus, select:focus, textarea:focus {
   }
 
   .admin-drawer {
-    display: flex;
+    display: none;
+  }
+
+  .admin-drawer.open {
+    display: flex !important;
     position: fixed;
     top: 0;
     left: 0;
