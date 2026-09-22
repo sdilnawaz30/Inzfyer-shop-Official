@@ -38,6 +38,9 @@ export const fetchStorefrontProducts = async (filters, page = 1, limit = 12) => 
     if (filters.categoryId && filters.categoryId !== 'All') {
       params.append('categoryId', filters.categoryId);
     }
+    if (filters.type) {
+      params.append('type', filters.type);
+    }
     if (filters.searchQuery) {
       params.append('searchQuery', filters.searchQuery);
     }

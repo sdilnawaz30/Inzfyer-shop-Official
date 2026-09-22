@@ -46,10 +46,12 @@ const ShopPage = ({
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true);
-      const categoryId = selectedCategory === 'All' ? null : categories.find(c => c.name === selectedCategory)?.id;
+      const categoryId = (selectedCategory === 'All' || selectedCategory === 'New Arrivals') ? null : categories.find(c => c.name === selectedCategory)?.id;
+      const type = selectedCategory === 'New Arrivals' ? 'new' : null;
       
       const { products: data, totalCount: count } = await fetchStorefrontProducts({
         categoryId,
+        type,
         searchQuery: debouncedSearch,
         priceLimit,
         inStockOnly: onlyInStock,
@@ -70,10 +72,12 @@ const ShopPage = ({
   const handleLoadMore = async () => {
     setIsLoadingMore(true);
     const nextPage = page + 1;
-    const categoryId = selectedCategory === 'All' ? null : categories.find(c => c.name === selectedCategory)?.id;
+    const categoryId = (selectedCategory === 'All' || selectedCategory === 'New Arrivals') ? null : categories.find(c => c.name === selectedCategory)?.id;
+    const type = selectedCategory === 'New Arrivals' ? 'new' : null;
     
     const { products: data } = await fetchStorefrontProducts({
       categoryId,
+      type,
       searchQuery: debouncedSearch,
       priceLimit,
       inStockOnly: onlyInStock,

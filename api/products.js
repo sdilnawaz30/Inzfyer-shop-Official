@@ -92,6 +92,8 @@ export default async function handler(req, res) {
 
     if (type === 'featured') {
       conditions.push(eq(schema.products.featured, true));
+    } else if (type === 'new') {
+      conditions.push(eq(schema.products.newArrival, true));
     }
 
     // Determine sorting
