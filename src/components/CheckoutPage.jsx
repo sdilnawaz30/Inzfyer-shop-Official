@@ -4,6 +4,10 @@ import ResponsiveImage from './ResponsiveImage';
 import axios from 'axios';
 import { getShipping } from '../utils/shipping';
 import { load } from '@cashfreepayments/cashfree-js';
+import { indianCities } from '../utils/indianCities';
+import { indianStates } from '../utils/indianStates';
+import SearchableSelect from './SearchableSelect';
+import AddressAutocomplete from './AddressAutocomplete';
 
 const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo }) => {
   const [step, setStep] = useState('shipping'); // 'shipping' | 'payment' | 'processing'
@@ -87,6 +91,15 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
     }
 
     if (isProcessing) return;
+
+    if (!indianCities.includes(formData.city)) {
+      alert("Please select a valid City from the suggestions.");
+      return;
+    }
+    if (!indianStates.includes(formData.state)) {
+      alert("Please select a valid State from the suggestions.");
+      return;
+    }
 
     const cleanPhone = String(formData.mobile).replace(/\D/g, "").slice(-10);
     if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
@@ -216,42 +229,31 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
 
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label className="form-label">Address Line 2 (Optional)</label>
-                  <input type="text" value={formData.address2} onChange={(e) => setFormData({ ...formData, address2: e.target.value })} placeholder="Street Name, Area, Landmark" />
+                  <AddressAutocomplete 
+                    value={formData.address2} 
+                    onChange={(val) => setFormData({ ...formData, address2: val })} 
+                    placeholder="Street Name, Area, Landmark" 
+                  />
                 </div>
 
                 <div className="checkout-field-row-3">
                   <div>
                     <label className="form-label">City *</label>
-                    <input type="text" required list="indian-cities" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
-                    <datalist id="indian-cities">
-                      <option value="Mumbai" /><option value="Delhi" /><option value="Bengaluru" /><option value="Hyderabad" />
-                      <option value="Ahmedabad" /><option value="Chennai" /><option value="Kolkata" /><option value="Surat" />
-                      <option value="Pune" /><option value="Jaipur" /><option value="Lucknow" /><option value="Kanpur" />
-                    </datalist>
+                    <SearchableSelect 
+                      options={indianCities}
+                      value={formData.city}
+                      onChange={(val) => setFormData({ ...formData, city: val })}
+                      placeholder="Search City..."
+                    />
                   </div>
                   <div>
                     <label className="form-label">State *</label>
-                    <select required value={formData.state} onChange={(e) => setFormData({ ...formData, state: e.target.value })} style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1d5db' }}>
-                      <option value="">Select State</option>
-                      <option value="Andhra Pradesh">Andhra Pradesh</option><option value="Arunachal Pradesh">Arunachal Pradesh</option>
-                      <option value="Assam">Assam</option><option value="Bihar">Bihar</option>
-                      <option value="Chhattisgarh">Chhattisgarh</option><option value="Goa">Goa</option>
-                      <option value="Gujarat">Gujarat</option><option value="Haryana">Haryana</option>
-                      <option value="Himachal Pradesh">Himachal Pradesh</option><option value="Jharkhand">Jharkhand</option>
-                      <option value="Karnataka">Karnataka</option><option value="Kerala">Kerala</option>
-                      <option value="Madhya Pradesh">Madhya Pradesh</option><option value="Maharashtra">Maharashtra</option>
-                      <option value="Manipur">Manipur</option><option value="Meghalaya">Meghalaya</option>
-                      <option value="Mizoram">Mizoram</option><option value="Nagaland">Nagaland</option>
-                      <option value="Odisha">Odisha</option><option value="Punjab">Punjab</option>
-                      <option value="Rajasthan">Rajasthan</option><option value="Sikkim">Sikkim</option>
-                      <option value="Tamil Nadu">Tamil Nadu</option><option value="Telangana">Telangana</option>
-                      <option value="Tripura">Tripura</option><option value="Uttar Pradesh">Uttar Pradesh</option>
-                      <option value="Uttarakhand">Uttarakhand</option><option value="West Bengal">West Bengal</option>
-                      <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option><option value="Chandigarh">Chandigarh</option>
-                      <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option><option value="Delhi">Delhi</option>
-                      <option value="Jammu and Kashmir">Jammu and Kashmir</option><option value="Ladakh">Ladakh</option>
-                      <option value="Lakshadweep">Lakshadweep</option><option value="Puducherry">Puducherry</option>
-                    </select>
+                    <SearchableSelect 
+                      options={indianStates}
+                      value={formData.state}
+                      onChange={(val) => setFormData({ ...formData, state: val })}
+                      placeholder="Search State..."
+                    />
                   </div>
                   <div>
                     <label className="form-label">Pincode *</label>

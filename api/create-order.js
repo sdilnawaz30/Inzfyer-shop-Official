@@ -19,10 +19,10 @@ const orderSchema = z.object({
     name: z.string().min(2).max(100),
     email: z.string().email("Valid email is required"),
     phone: z.string().regex(/^[6-9]\d{9}$/, "Invalid Indian phone number"),
-    address1: z.string().min(5),
+    address1: z.string().min(1, "Address Line 1 is required"),
     address2: z.string().optional(),
-    city: z.string().min(2),
-    state: z.string().min(2),
+    city: z.string().min(2, "City is required"),
+    state: z.string().min(2, "State is required"),
     pincode: z.string().regex(/^[0-9]{6}$/, "Invalid pincode"),
   })
 });
