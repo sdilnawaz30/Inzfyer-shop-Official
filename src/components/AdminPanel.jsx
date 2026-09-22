@@ -106,6 +106,24 @@ const AdminPanel = ({
     fetchAdminData();
   }, []);
 
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    setSalesHistory(prev => prev.map(o => o.id === orderId ? { ...o, orderStatus: newStatus } : o));
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await axios.post('/api/admin/action', {
+        action: 'updateOrderStatus',
+        payload: { orderId, newStatus }
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      
+      if (!res.data.success) throw new Error("Failed to update");
+      showToast('Order status updated successfully', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to update order status', 'error');
+      fetchAdminData(); // Revert on failure
+    }
+  };
+
   const handleSaveProductClick = (product = null) => {
     setEditingProduct(product);
     setIsProductModalOpen(true);
@@ -232,16 +250,11 @@ const AdminPanel = ({
   // Calculated Metrics for Glass Cards
   const totalProducts = products.length;
   const totalOrders = salesHistory.length;
-  const totalRevenue = salesHistory.reduce((sum, sale) => sum + (sale.total || 0), 0);
+  // Revenue should only count PAID orders
+  const totalRevenue = salesHistory
+    .filter(sale => sale.paymentStatus === 'PAID')
+    .reduce((sum, sale) => sum + (Number(sale.finalTotal) || Number(sale.total) || 0), 0);
   const lowStockItems = products.filter(p => p.stock < 5);
-
-  // Mock Customers Data generated from sales
-  const customers = [
-    { id: 'CUST-101', name: 'Sophia Rodriguez', email: 'sophia.r@gmail.com', phone: '+91 98765 43210', ordersCount: 4, totalSpent: 7896, vip: true },
-    { id: 'CUST-102', name: 'Aarav Mehta', email: 'aarav.m@outlook.com', phone: '+91 98123 45678', ordersCount: 2, totalSpent: 3998, vip: false },
-    { id: 'CUST-103', name: 'Clara Kapoor', email: 'clara.k@yahoo.com', phone: '+91 99887 76655', ordersCount: 3, totalSpent: 6297, vip: true },
-    { id: 'CUST-104', name: 'Ananya Sharma', email: 'ananya.s@gmail.com', phone: '+91 97654 32109', ordersCount: 1, totalSpent: 1899, vip: false },
-  ];
 
   // Store Settings State
   const [storeSettings, setStoreSettings] = useState({
@@ -277,7 +290,6 @@ const AdminPanel = ({
     { id: 'Products', label: 'Products', icon: Package, badge: totalProducts },
     { id: 'Categories', label: 'Categories', icon: Tags, badge: categories.length },
     { id: 'Orders', label: 'Orders', icon: ShoppingCart, badge: totalOrders },
-    { id: 'Customers', label: 'Customers', icon: Users, badge: customers.length },
     { id: 'Inventory', label: 'Inventory (Stock)', icon: Boxes, badge: lowStockItems.length > 0 ? `${lowStockItems.length} Low` : null },
     { id: 'Settings', label: 'Settings', icon: Settings },
   ];
@@ -843,11 +855,11 @@ const AdminPanel = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
-                    <th style={{ padding: '0.85rem' }}>Order Ref</th>
+                    <th style={{ padding: '0.85rem' }}>Order ID</th>
                     <th style={{ padding: '0.85rem' }}>Date</th>
                     <th style={{ padding: '0.85rem' }}>Customer & Shipping</th>
-                    <th style={{ padding: '0.85rem' }}>Payment / Txn ID</th>
                     <th style={{ padding: '0.85rem' }}>Total</th>
+                    <th style={{ padding: '0.85rem' }}>Payment Status</th>
                     <th style={{ padding: '0.85rem' }}>Fulfillment Status</th>
                   </tr>
                 </thead>
@@ -857,33 +869,53 @@ const AdminPanel = ({
                     .slice().reverse().map((order, idx) => (
                     <tr 
                       key={order.id || idx} 
-                      onClick={() => setSelectedOrder(order)}
-                      style={{ borderBottom: '1px solid #F8D7D0', verticalAlign: 'top', cursor: 'pointer', transition: 'background 0.2s' }}
+                      style={{ borderBottom: '1px solid #F8D7D0', verticalAlign: 'top', transition: 'background 0.2s' }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fdf2f8'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{order.orderNumber}</td>
-                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Today'}</td>
-                      <td style={{ padding: '0.85rem' }}>
+                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B', cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>{order.orderNumber}</td>
+                      <td style={{ padding: '0.85rem', color: '#5C4347', cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>{order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Today'}</td>
+                      <td style={{ padding: '0.85rem', cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>
                         <div style={{ fontWeight: 600 }}>{order.customerName}</div>
                         <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', lineHeight: '1.4' }}>
                           {order.address}<br/>
                           {order.phone}
                         </div>
                       </td>
+                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B', cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>₹{Number(order.finalTotal || order.totalAmount).toLocaleString('en-IN')}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <div style={{ fontWeight: 600, color: order.paymentStatus === 'PAID' ? '#047857' : '#d97706' }}>{order.paymentStatus} via ONLINE</div>
+                        <div style={{ fontWeight: 600, color: order.paymentStatus === 'PAID' ? '#047857' : '#d97706' }}>
+                          {order.paymentStatus || 'PENDING'}
+                        </div>
                         {order.gatewayPaymentId && (
-                          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', fontFamily: 'monospace' }}>
-                            Txn: {order.gatewayPaymentId}
+                          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.2rem', fontFamily: 'monospace' }}>
+                            {order.gatewayPaymentId}
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B' }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? 'badge-warning' : 'badge-pink'}`}>
-                          {order.orderStatus}
-                        </span>
+                        <select
+                          value={order.orderStatus}
+                          onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                          style={{
+                            padding: '0.3rem 0.5rem',
+                            borderRadius: '6px',
+                            border: '1px solid #e5e7eb',
+                            fontSize: '0.85rem',
+                            backgroundColor: ['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? '#fef2f2' : '#f0fdf4',
+                            color: ['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? '#991b1b' : '#166534',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="PENDING_PAYMENT">PENDING PAYMENT</option>
+                          <option value="PROCESSING">PROCESSING</option>
+                          <option value="PACKED">PACKED</option>
+                          <option value="SHIPPED">SHIPPED</option>
+                          <option value="DELIVERED">DELIVERED</option>
+                          <option value="CANCELLED">CANCELLED</option>
+                          <option value="REFUNDED">REFUNDED</option>
+                        </select>
                       </td>
                     </tr>
                   ))}
@@ -900,10 +932,8 @@ const AdminPanel = ({
                     <div 
                       key={order.id || idx} 
                       className="admin-card-item"
-                      onClick={() => setSelectedOrder(order)}
-                      style={{ cursor: 'pointer' }}
                     >
-                      <div className="admin-card-row">
+                      <div className="admin-card-row" style={{ cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>
                         <span style={{ fontWeight: 700, color: '#A63A4B', fontSize: '0.95rem' }}>
                           {order.orderNumber}
                         </span>
@@ -912,25 +942,50 @@ const AdminPanel = ({
                         </span>
                       </div>
 
-                      <div style={{ fontSize: '0.85rem', color: '#2C181B' }}>
+                      <div style={{ fontSize: '0.85rem', color: '#2C181B', cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>
                         <strong>{order.customerName}</strong>
                         <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
                           {order.address?.substring(0, 40)}{order.address?.length > 40 ? '...' : ''}
                         </div>
                       </div>
 
-                      <div className="admin-card-row">
+                      <div className="admin-card-row" style={{ marginTop: '0.5rem', cursor: 'pointer' }} onClick={() => setSelectedOrder(order)}>
                         <span style={{ fontWeight: 800, color: '#2C181B', fontSize: '1.05rem' }}>
-                          ₹{Number(order.totalAmount).toLocaleString('en-IN')}
+                          ₹{Number(order.finalTotal || order.totalAmount).toLocaleString('en-IN')}
                         </span>
-                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? 'badge-warning' : 'badge-pink'}`}>
-                          {order.orderStatus}
+                        <span style={{ fontWeight: 700, color: order.paymentStatus === 'PAID' ? '#047857' : '#d97706', fontSize: '0.85rem' }}>
+                          Payment: {order.paymentStatus || 'PENDING'}
                         </span>
                       </div>
 
-                      <div className="admin-card-actions">
-                        <button className="btn btn-primary" style={{ width: '100%', padding: '0.45rem', fontSize: '0.82rem' }}>
-                          View Order Details
+                      <div className="admin-card-actions" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #fce7f3' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Status:</span>
+                          <select
+                            value={order.orderStatus}
+                            onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                            style={{
+                              padding: '0.3rem 0.5rem',
+                              borderRadius: '6px',
+                              border: '1px solid #e5e7eb',
+                              fontSize: '0.8rem',
+                              backgroundColor: ['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? '#fef2f2' : '#f0fdf4',
+                              color: ['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? '#991b1b' : '#166534',
+                              fontWeight: 600,
+                              maxWidth: '140px'
+                            }}
+                          >
+                            <option value="PENDING_PAYMENT">PENDING PAYMENT</option>
+                            <option value="PROCESSING">PROCESSING</option>
+                            <option value="PACKED">PACKED</option>
+                            <option value="SHIPPED">SHIPPED</option>
+                            <option value="DELIVERED">DELIVERED</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                            <option value="REFUNDED">REFUNDED</option>
+                          </select>
+                        </div>
+                        <button onClick={() => setSelectedOrder(order)} className="btn btn-ghost" style={{ width: '100%', padding: '0.45rem', fontSize: '0.82rem' }}>
+                          View Details
                         </button>
                       </div>
                     </div>
@@ -1040,74 +1095,7 @@ const AdminPanel = ({
           </div>
         )}
 
-        {/* VIEW 5: CUSTOMERS TAB */}
-        {activeTab === 'Customers' && (
-          <div className="glass glass-card" style={{ background: '#ffffff', padding: 'clamp(1rem, 2.5vw, 1.75rem)' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2C181B', marginBottom: '1.25rem' }}>Boutique Customer Profiles</h3>
-            
-            {/* Desktop Table View */}
-            <div className="admin-desktop-table-view" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #F8D7D0', textAlign: 'left', color: '#8C2E3C' }}>
-                    <th style={{ padding: '0.85rem' }}>Customer</th>
-                    <th style={{ padding: '0.85rem' }}>Email</th>
-                    <th style={{ padding: '0.85rem' }}>Phone</th>
-                    <th style={{ padding: '0.85rem' }}>Orders</th>
-                    <th style={{ padding: '0.85rem' }}>Total Spent</th>
-                    <th style={{ padding: '0.85rem' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customers.map((c) => (
-                    <tr key={c.id} style={{ borderBottom: '1px solid #F8D7D0' }}>
-                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#2C181B' }}>{c.name}</td>
-                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{c.email}</td>
-                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{c.phone}</td>
-                      <td style={{ padding: '0.85rem', fontWeight: 700 }}>{c.ordersCount} Orders</td>
-                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#A63A4B' }}>₹{c.totalSpent.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '0.85rem' }}>
-                        {c.vip ? (
-                          <span className="badge badge-purple"><Sparkles size={12} /> VIP Collector</span>
-                        ) : (
-                          <span className="badge badge-pink">Regular</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
-            {/* Mobile Responsive Cards View */}
-            <div className="admin-mobile-cards-view">
-              <div className="admin-card-list">
-                {customers.map((c) => (
-                  <div key={c.id} className="admin-card-item">
-                    <div className="admin-card-row">
-                      <span style={{ fontWeight: 700, color: '#2C181B', fontSize: '0.95rem' }}>{c.name}</span>
-                      {c.vip ? (
-                        <span className="badge badge-purple"><Sparkles size={12} /> VIP</span>
-                      ) : (
-                        <span className="badge badge-pink">Regular</span>
-                      )}
-                    </div>
-
-                    <div style={{ fontSize: '0.82rem', color: '#5C4347' }}>
-                      <div>{c.email}</div>
-                      <div>{c.phone}</div>
-                    </div>
-
-                    <div className="admin-card-row" style={{ paddingTop: '0.35rem', borderTop: '1px solid #fdf2f8' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>{c.ordersCount} Orders</span>
-                      <span style={{ fontWeight: 800, color: '#A63A4B', fontSize: '1rem' }}>₹{c.totalSpent.toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* VIEW 6: INVENTORY TAB (STOCK IN, STOCK OUT, LOW STOCK ALERTS) */}
         {activeTab === 'Inventory' && (
