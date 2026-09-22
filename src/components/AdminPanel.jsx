@@ -626,12 +626,16 @@ const AdminPanel = ({
                       <tbody>
                         {salesHistory.slice(-5).reverse().map((sale, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #F8D7D0' }}>
-                            <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{sale.orderId || `ORD-${idx+1001}`}</td>
-                            <td style={{ padding: '0.85rem' }}>{sale.customerName || 'Boutique Guest'}</td>
-                            <td style={{ padding: '0.85rem', textTransform: 'uppercase' }}>{sale.paymentMethod || 'UPI'}</td>
-                            <td style={{ padding: '0.85rem', fontWeight: 700, color: '#2C181B' }}>₹{sale.total?.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{sale.orderNumber}</td>
+                            <td style={{ padding: '0.85rem' }}>{sale.customerName}</td>
+                            <td style={{ padding: '0.85rem', textTransform: 'uppercase' }}>ONLINE</td>
+                            <td style={{ padding: '0.85rem', fontWeight: 700, color: '#2C181B' }}>₹{Number(sale.totalAmount).toLocaleString('en-IN')}</td>
                             <td style={{ padding: '0.85rem' }}>
-                              <span className="badge badge-success"><CheckCircle size={12} /> Paid & Processed</span>
+                              {sale.paymentStatus === 'PAID' ? (
+                                <span className="badge badge-success"><CheckCircle size={12} /> Paid</span>
+                              ) : (
+                                <span className="badge badge-warning">{sale.paymentStatus}</span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -645,12 +649,16 @@ const AdminPanel = ({
                       {salesHistory.slice(-5).reverse().map((sale, idx) => (
                         <div key={idx} className="admin-card-item">
                           <div className="admin-card-row">
-                            <span style={{ fontWeight: 700, color: '#A63A4B' }}>{sale.orderId || `ORD-${idx+1001}`}</span>
-                            <span className="badge badge-success"><CheckCircle size={12} /> Paid</span>
+                            <span style={{ fontWeight: 700, color: '#A63A4B' }}>{sale.orderNumber}</span>
+                            {sale.paymentStatus === 'PAID' ? (
+                              <span className="badge badge-success"><CheckCircle size={12} /> Paid</span>
+                            ) : (
+                              <span className="badge badge-warning">{sale.paymentStatus}</span>
+                            )}
                           </div>
                           <div className="admin-card-row" style={{ fontSize: '0.88rem' }}>
-                            <span style={{ color: '#2C181B', fontWeight: 600 }}>{sale.customerName || 'Boutique Guest'}</span>
-                            <span style={{ fontWeight: 800, color: '#2C181B' }}>₹{sale.total?.toLocaleString('en-IN')}</span>
+                            <span style={{ color: '#2C181B', fontWeight: 600 }}>{sale.customerName}</span>
+                            <span style={{ fontWeight: 800, color: '#2C181B' }}>₹{Number(sale.totalAmount).toLocaleString('en-IN')}</span>
                           </div>
                         </div>
                       ))}
@@ -845,7 +853,7 @@ const AdminPanel = ({
                 </thead>
                 <tbody>
                   {salesHistory
-                    .filter(order => orderFilter === 'All' || order.order_status === orderFilter || order.payment_status === orderFilter)
+                    .filter(order => orderFilter === 'All' || order.orderStatus === orderFilter || order.paymentStatus === orderFilter)
                     .slice().reverse().map((order, idx) => (
                     <tr 
                       key={order.id || idx} 
@@ -854,28 +862,27 @@ const AdminPanel = ({
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fdf2f8'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{order.order_number || order.orderId || `ORD-${idx+1001}`}</td>
-                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : (order.timestamp || 'Today')}</td>
+                      <td style={{ padding: '0.85rem', fontWeight: 700, color: '#A63A4B' }}>{order.orderNumber}</td>
+                      <td style={{ padding: '0.85rem', color: '#5C4347' }}>{order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Today'}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <div style={{ fontWeight: 600 }}>{order.customer_name || order.customer?.name || 'Boutique Guest'}</div>
+                        <div style={{ fontWeight: 600 }}>{order.customerName}</div>
                         <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', lineHeight: '1.4' }}>
-                          {order.shipping_address || (order.customer && order.customer.address1)}<br/>
-                          {order.city || (order.customer && order.customer.city)} - {order.pincode || (order.customer && order.customer.pincode)}<br/>
-                          {order.customer_phone || (order.customer && order.customer.mobile)}
+                          {order.address}<br/>
+                          {order.phone}
                         </div>
                       </td>
                       <td style={{ padding: '0.85rem' }}>
-                        <div style={{ fontWeight: 600, color: '#047857' }}>{order.payment_status || order.paymentStatus || 'Paid'} via {order.payment_method || order.paymentMethod || 'UPI'}</div>
-                        {(order.gateway_payment_id || order.gatewayPaymentId || order.transaction_id || order.transactionId) && (
+                        <div style={{ fontWeight: 600, color: order.paymentStatus === 'PAID' ? '#047857' : '#d97706' }}>{order.paymentStatus} via ONLINE</div>
+                        {order.gatewayPaymentId && (
                           <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem', fontFamily: 'monospace' }}>
-                            Txn: {order.gateway_payment_id || order.gatewayPaymentId || order.transaction_id || order.transactionId}
+                            Txn: {order.gatewayPaymentId}
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B' }}>₹{(order.final_total || order.total)?.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '0.85rem', fontWeight: 800, color: '#2C181B' }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</td>
                       <td style={{ padding: '0.85rem' }}>
-                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.order_status) ? 'badge-warning' : 'badge-pink'}`}>
-                          {order.order_status || order.orderStatus || 'Pending'}
+                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? 'badge-warning' : 'badge-pink'}`}>
+                          {order.orderStatus}
                         </span>
                       </td>
                     </tr>
@@ -888,7 +895,7 @@ const AdminPanel = ({
             <div className="admin-mobile-cards-view">
               <div className="admin-card-list">
                 {salesHistory
-                  .filter(order => orderFilter === 'All' || order.order_status === orderFilter || order.payment_status === orderFilter)
+                  .filter(order => orderFilter === 'All' || order.orderStatus === orderFilter || order.paymentStatus === orderFilter)
                   .slice().reverse().map((order, idx) => (
                     <div 
                       key={order.id || idx} 
@@ -898,26 +905,26 @@ const AdminPanel = ({
                     >
                       <div className="admin-card-row">
                         <span style={{ fontWeight: 700, color: '#A63A4B', fontSize: '0.95rem' }}>
-                          {order.order_number || order.orderId || `ORD-${idx+1001}`}
+                          {order.orderNumber}
                         </span>
                         <span style={{ fontSize: '0.78rem', color: '#5C4347' }}>
-                          {order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN') : (order.timestamp || 'Today')}
+                          {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Today'}
                         </span>
                       </div>
 
                       <div style={{ fontSize: '0.85rem', color: '#2C181B' }}>
-                        <strong>{order.customer_name || order.customer?.name || 'Boutique Guest'}</strong>
+                        <strong>{order.customerName}</strong>
                         <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.2rem' }}>
-                          {order.city || (order.customer && order.customer.city)} - {order.pincode || (order.customer && order.customer.pincode)}
+                          {order.address?.substring(0, 40)}{order.address?.length > 40 ? '...' : ''}
                         </div>
                       </div>
 
                       <div className="admin-card-row">
                         <span style={{ fontWeight: 800, color: '#2C181B', fontSize: '1.05rem' }}>
-                          ₹{(order.final_total || order.total)?.toLocaleString('en-IN')}
+                          ₹{Number(order.totalAmount).toLocaleString('en-IN')}
                         </span>
-                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.order_status) ? 'badge-warning' : 'badge-pink'}`}>
-                          {order.order_status || order.orderStatus || 'Pending'}
+                        <span className={`badge ${['CANCELLED', 'REFUNDED'].includes(order.orderStatus) ? 'badge-warning' : 'badge-pink'}`}>
+                          {order.orderStatus}
                         </span>
                       </div>
 

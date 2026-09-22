@@ -1,6 +1,6 @@
 import { getDb } from '../../src/db/index.js';
 import * as schema from '../../src/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 
 export default async function handler(req, res) {
@@ -46,20 +46,48 @@ export default async function handler(req, res) {
             gatewayPaymentId: payment.cf_payment_id.toString(),
           })
           .where(eq(schema.orders.orderNumber, orderId));
-
-        // Fetch items and decrement stock
-        const items = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
-        for (const item of items) {
-          // Decrement stock in DB
-          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.productId));
-          if (product) {
-            await db.update(schema.products)
-              .set({ stock: Math.max(0, product.stock - item.quantity) })
-              .where(eq(schema.products.id, item.productId));
-          }
-        }
       }
 
+      return res.status(200).json({ message: 'Webhook processed successfully' });
+    }
+    
+    if (type === 'PAYMENT_FAILED_WEBHOOK') {
+      const orderId = data.order.order_id;
+      const db = getDb();
+      
+      const [order] = await db.select().from(schema.orders).where(eq(schema.orders.orderNumber, orderId));
+      if (order && order.paymentStatus === 'PENDING' && order.orderStatus !== 'CANCELLED' && order.orderStatus !== 'FAILED') {
+        
+        await db.transaction(async (tx) => {
+          // Mark as failed
+          await tx.update(schema.orders)
+            .set({ orderStatus: 'FAILED', paymentStatus: 'FAILED' })
+            .where(eq(schema.orders.id, order.id));
+
+          // Fetch items
+          const items = await tx.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+
+          if (items.length > 0) {
+            // Restore stock
+            for (const item of items) {
+              await tx.update(schema.products)
+                .set({ stock: sql`${schema.products.stock} + ${item.quantity}` })
+                .where(eq(schema.products.id, item.productId));
+            }
+
+            // Insert inventory movements
+            const inventoryMovementsToInsert = items.map(item => ({
+              productId: item.productId,
+              movementType: 'RESTOCK',
+              quantity: item.quantity,
+              referenceId: orderId,
+              notes: 'Payment failed webhook, stock restored'
+            }));
+            await tx.insert(schema.inventoryMovements).values(inventoryMovementsToInsert);
+          }
+        });
+        console.log(`Order ${orderId} failed, stock restored.`);
+      }
       return res.status(200).json({ message: 'Webhook processed successfully' });
     }
 

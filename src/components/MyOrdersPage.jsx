@@ -21,32 +21,28 @@ const getStatusColor = (status) => {
   }
 };
 
-const MyOrdersPage = ({ myOrders, setActivePage, salesHistory }) => {
+const MyOrdersPage = ({ myOrders, setActivePage }) => {
   
-  // Cross-reference with salesHistory to get the latest status
-  const ordersToDisplay = myOrders.map(myOrder => {
-    const updatedOrder = salesHistory.find(s => s.orderId === myOrder.orderId);
-    return updatedOrder || myOrder;
-  }).reverse(); // Show newest first
+  const ordersToDisplay = myOrders;
 
   const handleDownloadPDF = async (orderData) => {
     // Format for our standard invoice generator
     const invoiceData = {
       order: {
-        orderNumber: orderData.orderId,
-        createdAt: orderData.timestamp,
-        customerName: orderData.customer?.name,
-        customerEmail: orderData.customer?.email,
-        customerPhone: orderData.customer?.mobile,
-        shippingAddress: orderData.customer?.address1,
-        city: orderData.customer?.city,
-        state: orderData.customer?.state || '',
-        pincode: orderData.customer?.pincode,
-        subtotal: orderData.subtotal,
+        orderNumber: orderData.orderNumber,
+        createdAt: orderData.createdAt,
+        customerName: orderData.customerName,
+        customerEmail: orderData.email,
+        customerPhone: orderData.phone,
+        shippingAddress: orderData.address,
+        city: orderData.city,
+        state: orderData.state || '',
+        pincode: orderData.pincode,
+        subtotal: orderData.subtotalAmount,
         shippingCharge: orderData.shippingFee,
-        discount: orderData.discount,
-        taxAmount: orderData.tax,
-        finalTotal: orderData.total,
+        discount: orderData.discountAmount,
+        taxAmount: orderData.taxAmount,
+        finalTotal: orderData.totalAmount,
         paymentMethod: orderData.paymentMethod || 'Online',
         paymentStatus: orderData.paymentStatus || 'PENDING',
       },
@@ -96,13 +92,13 @@ const MyOrdersPage = ({ myOrders, setActivePage, salesHistory }) => {
               {/* Order Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #fce7f3', paddingBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '0.2rem' }}>Order Placed: {order.timestamp}</span>
-                  <strong style={{ fontSize: '1.1rem', color: '#1f2937' }}>{order.orderId}</strong>
+                  <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '0.2rem' }}>Order Placed: {new Date(order.createdAt).toLocaleDateString('en-IN')}</span>
+                  <strong style={{ fontSize: '1.1rem', color: '#1f2937' }}>{order.orderNumber}</strong>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '0.8rem', color: '#6b7280', display: 'block', marginBottom: '0.2rem' }}>Total Amount</span>
-                    <strong style={{ fontSize: '1.2rem', color: '#db2777' }}>₹{order.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
+                    <strong style={{ fontSize: '1.2rem', color: '#db2777' }}>₹{Number(order.totalAmount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</strong>
                   </div>
                 </div>
               </div>

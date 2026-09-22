@@ -78,6 +78,23 @@ function App() {
   const [salesHistory, setSalesHistory] = useState([]);
   const [myOrders, setMyOrders] = useState([]);
 
+  useEffect(() => {
+    const fetchMyOrders = async () => {
+      const token = localStorage.getItem('inzfyer-customer-token');
+      if (token) {
+        try {
+          const response = await axios.post('/api/orders', { action: 'myOrders', customerToken: token });
+          if (response.data.success && response.data.data) {
+            setMyOrders(response.data.data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch my orders", error);
+        }
+      }
+    };
+    fetchMyOrders();
+  }, []);
+
   const [recentOrder, setRecentOrder] = useState(null);
 
   const [appliedPromo, setAppliedPromo] = useState(null);
@@ -188,9 +205,17 @@ function App() {
     showToast('Removed from wishlist', 'info');
   }, []);
 
-  // Checkout completion
   const handleCompleteCheckout = (orderData) => {
-    setMyOrders(prev => [...prev, orderData]);
+    if (orderData.customerToken) {
+      localStorage.setItem('inzfyer-customer-token', orderData.customerToken);
+    }
+    setMyOrders(prev => {
+      // Avoid duplicate pushes
+      if (prev.some(o => (o.orderId || o.orderNumber) === (orderData.orderId || orderData.orderNumber))) {
+        return prev;
+      }
+      return [...prev, orderData];
+    });
     setRecentOrder(orderData);
     setCart([]);
     setAppliedPromo(null);
@@ -312,7 +337,6 @@ function App() {
             {activePage === 'my-orders' && (
               <MyOrdersPage 
                 myOrders={myOrders}
-                salesHistory={salesHistory}
                 setActivePage={setActivePage}
               />
             )}

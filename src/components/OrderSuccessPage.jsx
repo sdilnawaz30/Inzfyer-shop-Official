@@ -22,6 +22,14 @@ const OrderSuccessPage = ({ setActivePage }) => {
           return;
         }
 
+        // 1. Actively verify payment state with backend
+        try {
+          await axios.post('/api/verify-payment', { orderId });
+        } catch (verifyErr) {
+          console.warn('Payment verification returned an error. We will still fetch the order.', verifyErr);
+        }
+
+        // 2. Fetch the final updated invoice data
         const response = await axios.post('/api/get-invoice', {
           orderNumber: orderId,
           contact: contact

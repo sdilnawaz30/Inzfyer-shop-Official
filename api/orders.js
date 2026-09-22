@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { getDb } from '../src/db/index.js';
 import * as schema from '../src/db/schema.js';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, or, desc } from 'drizzle-orm';
+import jwt from 'jsonwebtoken';
 
 const getInvoiceSchema = z.object({
   orderNumber: z.string().min(1, "Order number is required"),
@@ -107,6 +108,56 @@ export default async function handler(req, res) {
       });
 
       return res.status(200).json({ success: true, message: 'Order successfully cancelled and stock restored' });
+    }
+
+    else if (action === 'myOrders') {
+      const { customerToken } = req.body;
+      if (!customerToken) {
+        return res.status(401).json({ success: false, message: 'Unauthorized. Token required.' });
+      }
+
+      let contact;
+      try {
+        const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_please_change';
+        const decoded = jwt.verify(customerToken, jwtSecret);
+        contact = decoded.contact;
+      } catch (err) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired session token.' });
+      }
+
+      if (!contact) {
+        return res.status(400).json({ success: false, message: 'Contact information missing from token.' });
+      }
+
+      const userOrders = await db.select()
+        .from(schema.orders)
+        .where(or(
+          eq(schema.orders.email, contact),
+          eq(schema.orders.phone, contact)
+        ))
+        .orderBy(desc(schema.orders.createdAt));
+
+      // Also fetch items for these orders so the frontend has full data
+      const orderIds = userOrders.map(o => o.id);
+      let items = [];
+      if (orderIds.length > 0) {
+        // Unfortunately inArray throws if array is empty, so we wrap it
+        const { inArray } = await import('drizzle-orm');
+        items = await db.select().from(schema.orderItems).where(inArray(schema.orderItems.orderId, orderIds));
+      }
+
+      // Group items by order
+      const ordersWithItems = userOrders.map(order => ({
+        ...order,
+        items: items.filter(i => i.orderId === order.id).map(i => ({
+          name: i.productName,
+          qty: i.quantity,
+          price: Number(i.unitPrice),
+          gstRate: Number(i.gstRate || 18)
+        }))
+      }));
+
+      return res.status(200).json({ success: true, data: ordersWithItems });
     }
 
     else {

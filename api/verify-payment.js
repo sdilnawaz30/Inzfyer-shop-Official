@@ -52,17 +52,6 @@ export default async function handler(req, res) {
             gatewayPaymentId: successfulPayment.cf_payment_id.toString(),
           })
           .where(eq(schema.orders.orderNumber, orderId));
-
-        // Fetch items and decrement stock
-        const items = await db.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
-        for (const item of items) {
-          const [product] = await db.select().from(schema.products).where(eq(schema.products.id, item.productId));
-          if (product) {
-            await db.update(schema.products)
-              .set({ stock: Math.max(0, product.stock - item.quantity) })
-              .where(eq(schema.products.id, item.productId));
-          }
-        }
       }
 
       // Fetch the updated order
