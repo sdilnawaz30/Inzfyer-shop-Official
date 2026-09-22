@@ -274,7 +274,6 @@ export const generateAndDownloadInvoice = async (invoiceData, isPos = false) => 
   const orderSubtotal = Number(order.subtotal || 0);
   const orderDiscount = Number(order.discount || 0);
   const orderShipping = Number(order.shippingCharge || order.shipping_charge || 0);
-  const orderGiftWrapping = Number(order.giftWrappingCharge || order.gift_wrapping_charge || 0);
   const orderTax = Number(order.taxAmount || order.tax_amount || 0);
   const orderTotal = Number(order.finalTotal || order.final_total || order.totalAmount || order.total || 0);
   
@@ -305,12 +304,6 @@ export const generateAndDownloadInvoice = async (invoiceData, isPos = false) => 
     doc.text(`₹${orderShipping.toFixed(2)}`, sumX2, currentY, { align: 'right' });
     currentY += 6;
     
-    if (orderGiftWrapping > 0) {
-      doc.text('Gift Wrapping:', sumX1, currentY);
-      doc.text(`₹${orderGiftWrapping.toFixed(2)}`, sumX2, currentY, { align: 'right' });
-      currentY += 6;
-    }
-    
     doc.text('GST / Tax:', sumX1, currentY);
     doc.text(`₹${orderTax.toFixed(2)}`, sumX2, currentY, { align: 'right' });
     currentY += 8;
@@ -328,14 +321,7 @@ export const generateAndDownloadInvoice = async (invoiceData, isPos = false) => 
     
     doc.text('Shipping:', sumX1, currentY);
     doc.text(`₹${orderShipping.toFixed(2)}`, sumX2, currentY, { align: 'right' });
-    currentY += 6;
-    
-    if (orderGiftWrapping > 0) {
-      doc.text('Gift Wrapping:', sumX1, currentY);
-      doc.text(`₹${orderGiftWrapping.toFixed(2)}`, sumX2, currentY, { align: 'right' });
-      currentY += 6;
-    }
-    currentY += 2;
+    currentY += 8;
   }
   
   // Grand Total Box

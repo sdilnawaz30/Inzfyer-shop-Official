@@ -72,8 +72,6 @@ export const orders = pgTable('orders', {
   sgstAmount: numeric('sgst_amount', { precision: 10, scale: 2 }).default('0'),
   igstAmount: numeric('igst_amount', { precision: 10, scale: 2 }).default('0'),
   baseSubtotal: numeric('base_subtotal', { precision: 10, scale: 2 }).default('0'),
-  giftWrapping: boolean('gift_wrapping').default(false),
-  giftWrappingCharge: numeric('gift_wrapping_charge', { precision: 10, scale: 2 }).default('0'),
   totalAmount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
   paymentStatus: text('payment_status').default('PENDING'),
   orderStatus: text('order_status').default('PENDING_PAYMENT'),
