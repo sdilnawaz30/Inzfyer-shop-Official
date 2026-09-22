@@ -8,7 +8,7 @@ import './HomePage.css';
 const highlights = [
   { label: 'Delivery in 1-4 Days', icon: Truck },
   { label: 'Secure Payments', icon: Lock },
-  { label: 'Handmade Quality', icon: Heart },
+  { label: 'Cute gifts', icon: Heart },
 ];
 
 const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSelectProduct, setSelectedCategory }) => {
