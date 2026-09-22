@@ -188,9 +188,6 @@ const OrderSuccessPage = ({ setActivePage }) => {
             {isDownloading ? <Loader2 size={18} style={{ marginRight: '0.5rem', animation: 'spin 1s linear infinite' }} /> : <Download size={18} style={{ marginRight: '0.5rem' }} />} 
             {isDownloading ? 'Generating PDF...' : 'Download Invoice'}
           </button>
-          <button onClick={() => setActivePage('my-orders')} className="btn btn-secondary" style={{ padding: '0.85rem 1.5rem', flex: '1 1 auto', minWidth: '200px' }}>
-            <ShoppingBag size={18} style={{ marginRight: '0.5rem' }} /> View My Orders
-          </button>
           <button onClick={() => setActivePage('shop')} className="btn btn-ghost" style={{ padding: '0.85rem 1.5rem', flex: '1 1 100%' }}>
             Continue Shopping <ArrowRight size={18} style={{ marginLeft: '0.5rem' }} />
           </button>

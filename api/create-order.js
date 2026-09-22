@@ -5,7 +5,6 @@ import * as schema from '../src/db/schema.js';
 import { inArray, eq, and, gte, sql } from 'drizzle-orm';
 import { enqueueNotification } from './_utils/notifications.js';
 import { getShipping } from '../src/utils/shipping.js';
-import jwt from 'jsonwebtoken';
 
 // Zod schema for input validation
 const orderSchema = z.object({
@@ -251,18 +250,9 @@ export default async function handler(req, res) {
       console.error('Failed to enqueue order creation notification (non-critical):', notifErr.message);
     }
 
-    // Generate a secure JWT for the customer session
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_please_change';
-    const customerToken = jwt.sign(
-      { contact: customerDetails.email || customerDetails.phone },
-      jwtSecret,
-      { expiresIn: '30d' }
-    );
-
     return res.status(200).json({
       success: true,
       paymentSessionId: paymentSessionId,
-      customerToken: customerToken,
       orderData: {
         orderId: newOrder.orderNumber,
         totalAmount: Number(totalAmount.toFixed(2)),

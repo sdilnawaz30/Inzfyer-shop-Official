@@ -124,13 +124,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
         const orderNum = createOrderRes.data.orderData.orderId || createOrderRes.data.orderData.orderNumber;
         const contact = formData.email || formData.mobile;
         
-        // Include customerToken so App.jsx can store it for IDOR protection
-        const enrichedOrderData = {
-          ...createOrderRes.data.orderData,
-          customerToken: createOrderRes.data.customerToken
-        };
-
-        onCompleteCheckout(enrichedOrderData);
+        onCompleteCheckout(createOrderRes.data.orderData);
 
         const cashfreeMode = (
           import.meta.env.VITE_CASHFREE_MODE ||

@@ -14,7 +14,6 @@ const ProductDetailPage = lazy(() => import('./components/ProductDetailPage'));
 const CartView = lazy(() => import('./components/CartView'));
 const CheckoutPage = lazy(() => import('./components/CheckoutPage'));
 const OrderSuccessPage = lazy(() => import('./components/OrderSuccessPage'));
-const MyOrdersPage = lazy(() => import('./components/MyOrdersPage'));
 const WishlistView = lazy(() => import('./components/WishlistView'));
 const AboutPage = lazy(() => import('./components/AboutPage'));
 const ContactPage = lazy(() => import('./components/ContactPage'));
@@ -28,7 +27,7 @@ const AdminPanel = lazy(() => import('./components/AdminPanel'));
 function App() {
   const [activePage, setActivePage] = useState(() => {
     const path = window.location.pathname.replace(/^\/+/, '');
-    const validPages = ['home', 'shop', 'wishlist', 'cart', 'checkout', 'order-success', 'my-orders', 'about', 'contact', 'privacy', 'refund', 'shipping', 'terms', 'admin'];
+    const validPages = ['home', 'shop', 'wishlist', 'cart', 'checkout', 'order-success', 'about', 'contact', 'privacy', 'refund', 'shipping', 'terms', 'admin'];
     return validPages.includes(path) ? path : 'home';
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +43,7 @@ function App() {
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.replace(/^\/+/, '');
-      const validPages = ['home', 'shop', 'wishlist', 'cart', 'checkout', 'order-success', 'my-orders', 'about', 'contact', 'privacy', 'refund', 'shipping', 'terms', 'admin'];
+      const validPages = ['home', 'shop', 'wishlist', 'cart', 'checkout', 'order-success', 'about', 'contact', 'privacy', 'refund', 'shipping', 'terms', 'admin'];
       setActivePage(validPages.includes(path) ? path : 'home');
     };
     window.addEventListener('popstate', handlePopState);
@@ -76,24 +75,6 @@ function App() {
   });
 
   const [salesHistory, setSalesHistory] = useState([]);
-  const [myOrders, setMyOrders] = useState([]);
-
-  useEffect(() => {
-    const fetchMyOrders = async () => {
-      const token = localStorage.getItem('inzfyer-customer-token');
-      if (token) {
-        try {
-          const response = await axios.post('/api/orders', { action: 'myOrders', customerToken: token });
-          if (response.data.success && response.data.data) {
-            setMyOrders(response.data.data);
-          }
-        } catch (error) {
-          console.error("Failed to fetch my orders", error);
-        }
-      }
-    };
-    fetchMyOrders();
-  }, []);
 
   const [recentOrder, setRecentOrder] = useState(null);
 
@@ -206,16 +187,6 @@ function App() {
   }, []);
 
   const handleCompleteCheckout = (orderData) => {
-    if (orderData.customerToken) {
-      localStorage.setItem('inzfyer-customer-token', orderData.customerToken);
-    }
-    setMyOrders(prev => {
-      // Avoid duplicate pushes
-      if (prev.some(o => (o.orderId || o.orderNumber) === (orderData.orderId || orderData.orderNumber))) {
-        return prev;
-      }
-      return [...prev, orderData];
-    });
     setRecentOrder(orderData);
     setCart([]);
     setAppliedPromo(null);
@@ -330,13 +301,6 @@ function App() {
             {activePage === 'order-success' && (
               <OrderSuccessPage 
                 orderData={recentOrder}
-                setActivePage={setActivePage}
-              />
-            )}
-
-            {activePage === 'my-orders' && (
-              <MyOrdersPage 
-                myOrders={myOrders}
                 setActivePage={setActivePage}
               />
             )}
