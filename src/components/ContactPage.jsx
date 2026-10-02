@@ -126,7 +126,7 @@ const ContactPage = ({ showToast }) => {
                 <div>
                   <strong style={{ color: '#1f2937' }}>WhatsApp Order & Support</strong>
                   <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: '2px' }}>
-                    <a href="https://wa.me/919445544739" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>+91-9445544739</a>
+                    <a href="tel:+91-9445544739" style={{ color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>+91-9445544739</a>
                   </p>
                 </div>
               </div>
@@ -135,7 +135,9 @@ const ContactPage = ({ showToast }) => {
                 <Mail size={22} color="#db2777" style={{ flexShrink: 0 }} />
                 <div>
                   <strong style={{ color: '#1f2937' }}>Email</strong>
-                  <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: '2px' }}>admin@inzfyer.in</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.88rem', marginTop: '2px' }}>
+                    <a href="mailto:admin@inzfyer.in" style={{ color: '#be185d', textDecoration: 'none' }}>admin@inzfyer.in</a>
+                  </p>
                 </div>
               </div>
 

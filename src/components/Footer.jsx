@@ -79,11 +79,11 @@ const Footer = ({ setActivePage, showToast }) => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <MessageCircle size={16} color="#25D366" />
-                <a href="https://wa.me/919445544739" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>+91-9445544739</a>
+                <a href="tel:+91-9445544739" style={{ color: '#25D366', fontWeight: 600, textDecoration: 'none' }}>+91-9445544739</a>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <Mail size={16} color="#be185d" />
-                <span style={{ color: '#4b5563' }}>admin@inzfyer.in</span>
+                <a href="mailto:admin@inzfyer.in" style={{ color: '#4b5563', textDecoration: 'none' }}>admin@inzfyer.in</a>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <Camera size={16} color="#E1306C" />
@@ -100,16 +100,16 @@ const Footer = ({ setActivePage, showToast }) => {
             <p style={{ fontSize: '0.85rem', marginBottom: '1rem', lineHeight: '1.5', color: '#4b5563' }}>
               Subscribe to get secret discount codes, new plushie arrivals, and luxury gift wrapping tips!
             </p>
-            <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem' }}>
+            <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '100%' }}>
               <input
                 type="email"
                 placeholder="Enter your email..."
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                style={{ fontSize: '0.85rem', padding: '0.65rem 0.9rem' }}
+                style={{ fontSize: '0.85rem', padding: '0.65rem 0.9rem', width: '100%', minWidth: 0 }}
               />
-              <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem 1rem' }}>
+              <button type="submit" className="btn btn-primary" style={{ padding: '0.65rem 1rem', flexShrink: 0 }}>
                 <Send size={16} />
               </button>
             </form>

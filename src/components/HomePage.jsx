@@ -42,7 +42,7 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
     <div className="storefront animate-fade-in">
       <section className="pink-hero">
         <div className="pink-hero-copy">
-          <div className="new-drop"><Sparkles size={17} /> NEW DROP</div>
+          <div className="new-drop">NEW DROP</div>
           <h1><span className="hero-title-line">Collect <span>Cute.</span></span><br /><span className="hero-title-line">Carry <em>Joy.</em></span></h1>
           <div className="hero-rule"><Heart size={15} fill="currentColor" /></div>
           <p>Handmade plushies, charms &amp; adorable gifts made to <strong>brighten every day.</strong></p>

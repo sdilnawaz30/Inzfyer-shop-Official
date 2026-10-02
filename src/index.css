@@ -987,11 +987,19 @@ input:focus, select:focus, textarea:focus {
 
   /* 4. HERO SECTION */
   .pink-hero {
-    padding: 12px 20px 24px 20px !important;
+    padding: 24px 20px 24px 20px !important;
+  }
+  .pink-hero-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    margin: 0 auto !important;
   }
   .pink-hero h1 {
     font-size: 38px !important;
     margin: 8px 0 12px !important;
+    line-height: 1.02 !important;
   }
   .pink-hero p {
     font-size: 15px !important;
@@ -1001,11 +1009,13 @@ input:focus, select:focus, textarea:focus {
   .hero-cta {
     padding: 14px 24px !important;
     font-size: 15px !important;
-    width: auto !important;
+    width: 100% !important;
+    max-width: 280px !important;
+    margin: 0 auto !important;
   }
   .hero-image-frame img {
     min-height: 200px !important;
-    transform: scale(1.1) translateX(0) !important;
+    transform: scale(1.24) translateX(0) !important;
   }
   .hero-rule {
     margin: 16px 0 !important;

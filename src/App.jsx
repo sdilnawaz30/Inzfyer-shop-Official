@@ -24,6 +24,16 @@ const TermsPolicyPage = lazy(() => import('./components/TermsPolicyPage'));
 const AdminLoginModal = lazy(() => import('./components/AdminLoginModal'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
 
+const ScrollToTopAfterMount = ({ pageKey }) => {
+  useEffect(() => {
+    // Only scroll to top if there is no hash
+    if (!window.location.hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [pageKey]);
+  return null;
+};
+
 function App() {
   const [activePage, setActivePage] = useState(() => {
     const path = window.location.pathname.replace(/^\/+/, '');
@@ -38,9 +48,8 @@ function App() {
     if (window.location.pathname !== path) {
       window.history.pushState(null, '', path);
     }
-    // Scroll restoration: scroll to top unless a hash exists
-    if (!window.location.hash) {
-      window.scrollTo(0, 0);
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
     }
   }, [activePage]);
 
@@ -222,6 +231,7 @@ function App() {
       {/* Main Content Area */}
       <main style={{ flexGrow: 1, maxWidth: '1300px', width: '100%', margin: '0 auto' }} className="app-content">
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Loader2 className="spin" size={32} color="#db2777" /></div>}>
+          <ScrollToTopAfterMount pageKey={`${activePage}-${selectedProductForDetail ? selectedProductForDetail.id : 'list'}`} />
           {selectedProductForDetail ? (
             <ProductDetailPage 
               product={selectedProductForDetail}
