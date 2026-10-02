@@ -7,7 +7,7 @@ const MobileNav = ({ activePage, setActivePage, cartCount, wishlistCount, isAdmi
     { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'wishlist', label: 'Wishlist', icon: Heart, badge: wishlistCount },
     { id: 'cart', label: 'Cart', icon: ShoppingBag, badge: cartCount },
-    { id: isAdmin ? 'admin' : 'contact', label: isAdmin ? 'Admin' : 'Contact', icon: isAdmin ? ShieldCheck : PhoneCall },
+    { id: 'contact', label: 'Contact', icon: PhoneCall },
   ];
 
   return (

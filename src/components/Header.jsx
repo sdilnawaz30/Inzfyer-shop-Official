@@ -95,7 +95,7 @@ const Header = ({
           </button>
 
           {/* Admin Toggle */}
-          {isAdmin && (
+          {isAdmin && activePage === 'admin' && (
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
               <button onClick={() => setActivePage('admin')} className="header-admin-panel-btn">
                 <ShieldCheck size={16} /> Admin Panel

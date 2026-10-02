@@ -960,3 +960,175 @@ input:focus, select:focus, textarea:focus {
     justify-content: center;
   }
 }
+
+/* --- MOBILE UI POLISH --- */
+@media (max-width: 480px) {
+  /* 3. MOBILE HEADER */
+  .header-main {
+    padding: 0.5rem 1rem !important;
+    gap: 0.5rem;
+  }
+  .header-brand-logo {
+    height: 38px !important;
+    max-height: 38px !important;
+  }
+  .header-brand-name {
+    font-size: 1.1rem !important;
+  }
+  .header-icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .header-icon-btn svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* 4. HERO SECTION */
+  .pink-hero {
+    padding: 24px 20px !important;
+  }
+  .pink-hero h1 {
+    font-size: 38px !important;
+    margin: 8px 0 12px !important;
+  }
+  .pink-hero p {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    margin-bottom: 20px !important;
+  }
+  .hero-cta {
+    padding: 14px 24px !important;
+    font-size: 15px !important;
+    width: auto !important;
+  }
+  .hero-image-frame img {
+    min-height: 200px !important;
+    transform: scale(1.1) translateX(0) !important;
+  }
+  .hero-rule {
+    margin: 16px 0 !important;
+  }
+  .new-drop, .gift-banner>div>span {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+  }
+
+  /* 5. BUTTONS */
+  .btn {
+    padding: 12px 20px !important;
+    font-size: 15px !important;
+  }
+  
+  /* 6. CARDS / BOXES */
+  .storefront {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+  .store-section {
+    padding: 24px 16px !important;
+    margin: 32px 0 !important;
+    border-radius: 20px !important;
+  }
+  .why-choose-section {
+    padding: 24px 16px !important;
+    margin: 32px 0 !important;
+    border-radius: 20px !important;
+  }
+  .why-choose-card {
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+  }
+  .category-card {
+    padding: 16px 8px !important;
+    border-radius: 16px !important;
+  }
+  
+  /* 7. SIGNATURE UNBOXING SECTION */
+  .gift-banner {
+    padding: 24px 20px !important;
+    gap: 20px !important;
+    border-radius: 20px !important;
+  }
+  .gift-banner h2 {
+    font-size: 30px !important;
+    margin: 12px 0 !important;
+  }
+  .gift-banner p {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+  }
+  .gift-banner button {
+    padding: 12px 24px !important;
+    margin-top: 16px !important;
+    font-size: 15px !important;
+  }
+  .gift-banner-mark {
+    min-height: 120px !important;
+    gap: 8px !important;
+    padding: 16px !important;
+  }
+  .gift-banner-mark b {
+    font-size: 16px !important;
+  }
+  
+  /* 8. TYPOGRAPHY SYSTEM */
+  .section-heading h2 {
+    font-size: 28px !important;
+    margin-bottom: 8px !important;
+  }
+  .section-heading p {
+    font-size: 15px !important;
+  }
+  .product-copy h3 {
+    font-size: 16px !important;
+  }
+  .product-bottom b {
+    font-size: 18px !important;
+  }
+  .why-choose-card h3 {
+    font-size: 18px !important;
+  }
+  
+  /* 10. MOBILE BOTTOM NAVIGATION */
+  .mobile-bottom-nav {
+    padding: 0.5rem 1rem env(safe-area-inset-bottom) !important;
+    height: auto !important;
+    min-height: 64px !important;
+  }
+  .mobile-nav-item span {
+    font-size: 11px !important;
+  }
+  .mobile-nav-item svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  
+  /* 11. PRODUCT CARDS */
+  .product-card {
+    border-radius: 16px !important;
+  }
+  .product-copy {
+    padding: 12px !important;
+  }
+  .product-bottom button {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .product-bottom button svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  .grid-products {
+    gap: 12px !important;
+  }
+  
+  /* 12. CART / CHECKOUT */
+  .cart-item-card, .checkout-field-row-2, .checkout-field-row-3 {
+    gap: 12px !important;
+    padding: 16px !important;
+  }
+  .glass-card {
+    padding: 16px !important;
+  }
+}
