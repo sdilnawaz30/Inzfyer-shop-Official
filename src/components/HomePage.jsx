@@ -45,9 +45,13 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
           <div className="new-drop staggered-drop">NEW DROP</div>
           <h1>
             <span className="hero-title-line stagger-line-1">Collect <span>Cute.</span></span><br className="desktop-br" />
-            <span className="hero-title-line stagger-line-2">Carry <em>Joy <span className="stagger-heart">♡</span></em></span>
+            <span className="hero-title-line stagger-line-2">Carry <em>Joy. <span className="stagger-heart">♡</span></em></span>
           </h1>
-          <div className="hero-rule desktop-rule"><Heart size={15} fill="currentColor" /></div>
+          <div className="hero-rule stagger-rule">
+            <span className="rule-line mobile-only-inline"></span>
+            <Heart size={14} fill="currentColor" className="rule-heart" />
+            <span className="rule-line mobile-only-inline"></span>
+          </div>
           <p className="staggered-p">Handmade plushies, charms &amp; adorable gifts <br className="mobile-br" />made to <strong>brighten every day.</strong></p>
           <button className="hero-cta staggered-cta" onClick={() => { setSelectedCategory('New Arrivals'); setActivePage('shop'); }}>New Arrivals <ArrowRight size={22} /></button>
         </div>

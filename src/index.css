@@ -999,7 +999,7 @@ input:focus, select:focus, textarea:focus {
   }
   .staggered-drop {
     align-self: flex-start !important;
-    margin-left: 12% !important;
+    margin-left: 14% !important;
     margin-bottom: 22px !important;
   }
   .pink-hero h1 {
@@ -1014,54 +1014,81 @@ input:focus, select:focus, textarea:focus {
     display: none !important;
   }
   .stagger-line-1 {
-    margin-left: 32% !important;
-    margin-bottom: 6px !important;
+    margin-left: 30% !important;
+    margin-bottom: 12px !important;
   }
   .stagger-line-2 {
-    margin-left: 50% !important;
+    margin-left: 44% !important;
     display: inline-flex !important;
     align-items: center !important;
   }
   .stagger-heart {
     font-size: 0.55em;
-    margin-left: 8px;
+    margin-left: 6px;
     color: #ff4b98;
     transform: translateY(-2px);
     display: inline-block;
   }
-  .desktop-rule {
-    display: none !important;
+  .stagger-rule {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin: 0 0 16px 0 !important;
+  }
+  .stagger-rule .rule-line {
+    display: block !important;
+    width: 45px !important;
+    height: 1px !important;
+    background-color: #ffcae0 !important;
+  }
+  .stagger-rule .rule-heart {
+    color: #ffcae0 !important;
   }
   .staggered-p {
-    font-size: 15px !important;
-    line-height: 1.45 !important;
+    font-size: 14.5px !important;
+    line-height: 1.5 !important;
     margin-bottom: 24px !important;
-    text-align: left !important;
-    margin-left: 10% !important;
-    max-width: 80% !important;
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    max-width: 90% !important;
   }
   .mobile-br {
     display: block !important;
   }
   @media (max-width: 360px) {
-    .stagger-line-1 { margin-left: 20% !important; }
-    .stagger-line-2 { margin-left: 35% !important; }
-    .staggered-p { margin-left: 5% !important; max-width: 90% !important; }
+    .stagger-line-1 { margin-left: 24% !important; }
+    .stagger-line-2 { margin-left: 36% !important; }
+    .staggered-p { max-width: 95% !important; }
   }
   @media (min-width: 412px) and (max-width: 480px) {
-    .stagger-line-1 { margin-left: 35% !important; }
-    .stagger-line-2 { margin-left: 55% !important; }
+    .stagger-line-1 { margin-left: 32% !important; }
+    .stagger-line-2 { margin-left: 46% !important; }
   }
-  .hero-cta {
+  .hero-highlight {
+    font-size: 11px !important;
+    padding: 6px 8px !important;
+  }
+  .hero-highlights {
+    gap: 6px !important;
+  }
+  .hero-cta.staggered-cta {
     padding: 14px 24px !important;
     font-size: 15px !important;
     width: 100% !important;
     max-width: 280px !important;
     margin: 0 auto !important;
+    align-self: center !important;
+    height: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
   .hero-image-frame img {
     min-height: 200px !important;
-    transform: scale(1.24) translateX(0) !important;
+    transform: scale(1.35) translateX(0) !important;
   }
   .hero-rule {
     margin: 16px 0 !important;
@@ -1244,3 +1271,5 @@ input:focus, select:focus, textarea:focus {
 }
 
 .mobile-br { display: none; }
+
+.mobile-only-inline { display: none; }
