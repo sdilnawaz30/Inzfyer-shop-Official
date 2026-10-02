@@ -15,6 +15,7 @@ const Header = ({
   onLogoutAdmin 
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navItems = [
     { id: 'home', label: 'Home' },
@@ -49,20 +50,15 @@ const Header = ({
 
         {/* Search & Actions */}
         <div className="header-actions">
-          {/* Search Box */}
+          {/* Desktop Search Toggle */}
           {activePage !== 'home' && (
-            <div className="header-search desktop-nav-links">
-              <Search size={16} className="header-search-icon" />
-              <input
-                type="text"
-                placeholder=" Search products here......"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (activePage !== 'shop') setActivePage('shop');
-                }}
-              />
-            </div>
+            <button 
+              onClick={() => setIsSearchOpen(!isSearchOpen)} 
+              className="header-icon-btn desktop-nav-links"
+              title="Search"
+            >
+              <Search size={20} />
+            </button>
           )}
 
           {/* Wishlist Icon */}
@@ -112,8 +108,8 @@ const Header = ({
         </div>
       </div>
 
-      {/* Mobile Search Row */}
-      <div className="mobile-search-row">
+      {/* Expandable Search Row */}
+      <div className={`mobile-search-row ${isSearchOpen ? 'desktop-show' : ''}`}>
         <div className="header-search mobile-search-input-wrapper">
           <Search size={16} className="header-search-icon" />
           <input

@@ -444,11 +444,17 @@ input:focus, select:focus, textarea:focus {
 /* Grid Layouts */
 .grid-products {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 950px) {
+  .grid-products {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
   .grid-products {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.85rem;
@@ -1272,6 +1278,16 @@ input:focus, select:focus, textarea:focus {
 /* Base style to hide mobile search row on desktop */
 .mobile-search-row {
   display: none;
+}
+.mobile-search-row.desktop-show {
+  display: block !important;
+  padding: 0 1.5rem 1rem 1.5rem;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+.mobile-search-row.desktop-show .mobile-search-input-wrapper {
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .mobile-br { display: none; }
