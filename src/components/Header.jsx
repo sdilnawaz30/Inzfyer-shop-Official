@@ -55,7 +55,7 @@ const Header = ({
               <Search size={16} className="header-search-icon" />
               <input
                 type="text"
-                placeholder="Search gifts, plushies..."
+                placeholder=" Search products here......"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -118,7 +118,7 @@ const Header = ({
           <Search size={16} className="header-search-icon" />
           <input
             type="text"
-            placeholder="Search gifts, plushies..."
+            placeholder=" Search products here......"
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
