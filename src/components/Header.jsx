@@ -111,6 +111,22 @@ const Header = ({
           </button>
         </div>
       </div>
+
+      {/* Mobile Search Row */}
+      <div className="mobile-search-row">
+        <div className="header-search mobile-search-input-wrapper">
+          <Search size={16} className="header-search-icon" />
+          <input
+            type="text"
+            placeholder="Search gifts, plushies..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              if (activePage !== 'shop') setActivePage('shop');
+            }}
+          />
+        </div>
+      </div>
     </header>
   );
 };
