@@ -24,10 +24,10 @@
   isolation: isolate;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(350px, 0.85fr);
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.75fr);
+  gap: 1rem;
   min-height: 480px;
-  padding: 40px 8% 50px;
+  padding: 40px 6% 50px;
   border: none;
   border-radius: 48px;
   background: var(--white-soft); /* Matches website background color */
@@ -37,7 +37,7 @@
 .pink-hero-copy {
   z-index: 2;
   align-self: center;
-  max-width: 570px;
+  max-width: 600px;
 }
 
 .new-drop, .gift-banner>div>span {
@@ -57,11 +57,19 @@
 
 .pink-hero h1 {
   margin: 34px 0 18px;
-  font-size: clamp(3.7rem, 7vw, 6.4rem);
+  font-size: clamp(3.2rem, 6.5vw, 5.8rem);
   line-height: .95;
   letter-spacing: -.075em;
   font-weight: 800;
   color: #000000;
+}
+
+.stagger-heart {
+  font-size: 0.55em;
+  margin-left: 6px;
+  color: #ff4b98;
+  transform: translateY(-4px);
+  display: inline-block;
 }
 
 .hero-title-line {
