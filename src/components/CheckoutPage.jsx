@@ -21,7 +21,8 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
     name: '',
     mobile: '',
     email: '',
-    address1: '',
+    house: '',
+    street: '',
     address2: '',
     city: '',
     state: '',
@@ -61,21 +62,53 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
         setShippingRate(null);
         setShippingStateName('');
         setShippingError('');
+        if (pin.length > 0 && pin.length < 6) {
+          setFormData(prev => ({ ...prev, city: '', state: '' }));
+        }
         return;
       }
 
       setIsCheckingShipping(true);
       setShippingError('');
+      
+      let fetchedCity = '';
+      let fetchedState = '';
+      let fetchError = '';
+
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const data = await response.json();
+        if (data && data[0] && data[0].Status === 'Success') {
+           const postOffice = data[0].PostOffice[0];
+           fetchedState = postOffice.State;
+           fetchedCity = postOffice.District || postOffice.Region || postOffice.Name;
+        } else {
+           fetchError = 'Could not find this pincode. Please check the 6-digit pincode.';
+        }
+      } catch (err) {
+        fetchError = 'Network error while verifying pincode. Please try again.';
+      }
+
+      if (fetchError) {
+         setShippingRate(null);
+         setShippingStateName('');
+         setShippingError(fetchError);
+         setFormData(prev => ({ ...prev, city: '', state: '' }));
+         setIsCheckingShipping(false);
+         return;
+      }
 
       const result = await getShipping({ pincode: pin, subtotal, config: shippingConfig });
       if (result.isValid) {
         setShippingRate(result.rate);
         setShippingStateName(result.state);
         setShippingError('');
+        setFormData(prev => ({ ...prev, city: fetchedCity, state: fetchedState }));
       } else {
         setShippingRate(null);
         setShippingStateName('');
         setShippingError(result.error || 'Invalid Pincode');
+        setFormData(prev => ({ ...prev, city: fetchedCity, state: fetchedState }));
       }
       setIsCheckingShipping(false);
     };
@@ -90,14 +123,15 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
       return;
     }
 
-    if (isProcessing) return;
-
-    if (!indianCities.includes(formData.city)) {
-      alert("Please select a valid City from the suggestions.");
+    if (!formData.street || formData.street.trim() === '') {
+      alert("Please enter your Street / Area.");
       return;
     }
-    if (!indianStates.includes(formData.state)) {
-      alert("Please select a valid State from the suggestions.");
+
+    if (isProcessing) return;
+
+    if (!formData.city || !formData.state) {
+      alert("City and State are required. Please enter a valid Pincode.");
       return;
     }
 
@@ -124,12 +158,13 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
     console.log("TYPE:", typeof cleanSubtotal);
 
     try {
-      const { mobile, ...existingFields } = formData;
+      const { mobile, house, street, ...existingFields } = formData;
+      const finalAddress1 = `${house}, ${street}`;
       const createOrderRes = await axios.post('/api/create-order', {
         pincode: String(formData.pincode).trim(),
         subtotal: cleanSubtotal,
         items: cart.map(item => ({ id: item.id, qty: item.qty })),
-        customerDetails: { ...existingFields, phone: cleanPhone },
+        customerDetails: { ...existingFields, address1: finalAddress1, phone: cleanPhone },
         idempotencyKey
       });
 
@@ -223,36 +258,52 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label className="form-label">Address Line 1 *</label>
-                  <input type="text" required maxLength="255" value={formData.address1} onChange={(e) => setFormData({ ...formData, address1: e.target.value })} placeholder="House/Flat No., Building Name" />
+                  <label className="form-label">House / Door No. *</label>
+                  <input type="text" required maxLength="100" value={formData.house} onChange={(e) => setFormData({ ...formData, house: e.target.value })} placeholder="18 A, Flat 4B, etc." />
                 </div>
 
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label className="form-label">Address Line 2 (Optional)</label>
+                  <label className="form-label">Street / Area *</label>
                   <AddressAutocomplete 
+                    value={formData.street} 
+                    onChange={(val) => setFormData({ ...formData, street: val })} 
+                    placeholder="NN Garden Old Washermenpet" 
+                    required={true}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label">Address Line 2 / Landmark (Optional)</label>
+                  <input 
+                    type="text" 
+                    maxLength="150" 
                     value={formData.address2} 
-                    onChange={(val) => setFormData({ ...formData, address2: val })} 
-                    placeholder="Street Name, Area, Landmark" 
+                    onChange={(e) => setFormData({ ...formData, address2: e.target.value })} 
+                    placeholder="Apartment, Floor, Landmark, Nearby Place" 
                   />
                 </div>
 
                 <div className="checkout-field-row-3">
                   <div>
                     <label className="form-label">City *</label>
-                    <SearchableSelect 
-                      options={indianCities}
+                    <input 
+                      type="text"
+                      required
+                      readOnly
                       value={formData.city}
-                      onChange={(val) => setFormData({ ...formData, city: val })}
-                      placeholder="Search City..."
+                      placeholder="Auto-filled"
+                      style={{ backgroundColor: '#f9fafb', color: '#374151', cursor: 'default' }}
                     />
                   </div>
                   <div>
                     <label className="form-label">State *</label>
-                    <SearchableSelect 
-                      options={indianStates}
+                    <input 
+                      type="text"
+                      required
+                      readOnly
                       value={formData.state}
-                      onChange={(val) => setFormData({ ...formData, state: val })}
-                      placeholder="Search State..."
+                      placeholder="Auto-filled"
+                      style={{ backgroundColor: '#f9fafb', color: '#374151', cursor: 'default' }}
                     />
                   </div>
                   <div>
@@ -262,12 +313,13 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
                       required
                       pattern="[0-9]{6}"
                       title="6 digit pincode"
+                      inputMode="numeric"
                       value={formData.pincode}
                       maxLength="6"
                       onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/\D/g, '') })}
                       style={{ borderColor: shippingError ? '#ef4444' : '' }}
                     />
-                    {isCheckingShipping && <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Loader2 size={12} className="spin" /> Checking...</p>}
+                    {isCheckingShipping && <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Loader2 size={12} className="spin" /> Finding location...</p>}
                     {shippingError && <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>{shippingError}</p>}
                   </div>
                 </div>
