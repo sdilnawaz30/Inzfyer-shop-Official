@@ -109,7 +109,7 @@ const CheckoutPage = ({ cart, onCompleteCheckout, setActivePage, appliedPromo })
 
     setIsProcessing(true);
     setStep('processing');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
 
     const cleanSubtotal = Number(String(subtotal).replace(/[^0-9.]/g, ""));
     if (isNaN(cleanSubtotal)) {

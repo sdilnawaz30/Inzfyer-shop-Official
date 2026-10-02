@@ -38,6 +38,10 @@ function App() {
     if (window.location.pathname !== path) {
       window.history.pushState(null, '', path);
     }
+    // Scroll restoration: scroll to top unless a hash exists
+    if (!window.location.hash) {
+      window.scrollTo(0, 0);
+    }
   }, [activePage]);
 
   useEffect(() => {
@@ -228,7 +232,7 @@ function App() {
               wishlist={wishlist}
               onSelectProduct={(p) => {
                 setSelectedProductForDetail(p);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo(0, 0);
               }}
             />
           ) : (
@@ -241,7 +245,7 @@ function App() {
                 wishlist={wishlist}
                 onSelectProduct={(p) => {
                   setSelectedProductForDetail(p);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo(0, 0);
                 }}
                 setSelectedCategory={setSelectedCategory}
               />
@@ -254,7 +258,7 @@ function App() {
                 wishlist={wishlist}
                 onSelectProduct={(p) => {
                   setSelectedProductForDetail(p);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo(0, 0);
                 }}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -271,7 +275,7 @@ function App() {
                 setActivePage={setActivePage}
                 onSelectProduct={(p) => {
                   setSelectedProductForDetail(p);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo(0, 0);
                 }}
               />
             )}

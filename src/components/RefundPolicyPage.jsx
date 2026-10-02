@@ -3,7 +3,7 @@ import { Package, Video, Clock, CreditCard, AlertCircle } from 'lucide-react';
 
 const RefundPolicyPage = ({ setActivePage }) => {
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   }, []);
 
   return (

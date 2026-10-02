@@ -482,7 +482,7 @@ const ProductDetailPage = ({ product, onClose, onAddToCart, onBuyNow, onToggleWi
                         src={rel.image} 
                         alt={rel.name} 
                         className="product-image"
-                        onClick={() => { onSelectProduct(rel); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        onClick={() => { onSelectProduct(rel); window.scrollTo(0, 0); }}
                         style={{ cursor: 'pointer' }}
                       />
                     </div>
@@ -491,7 +491,7 @@ const ProductDetailPage = ({ product, onClose, onAddToCart, onBuyNow, onToggleWi
                       <div>
                         <span style={{ fontSize: '0.78rem', color: '#8C2E3C', fontWeight: 600 }}>{rel.category}</span>
                         <h3 
-                          onClick={() => { onSelectProduct(rel); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          onClick={() => { onSelectProduct(rel); window.scrollTo(0, 0); }}
                           style={{ fontSize: '1.05rem', fontWeight: 700, color: '#2C181B', margin: '0.25rem 0 0.5rem 0', cursor: 'pointer' }}
                         >
                           {rel.name}

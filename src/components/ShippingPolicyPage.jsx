@@ -3,7 +3,7 @@ import { Truck, MapPin, Clock, FileText, AlertCircle, Phone } from 'lucide-react
 
 const ShippingPolicyPage = ({ setActivePage }) => {
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
   }, []);
 
   return (

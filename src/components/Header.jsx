@@ -25,11 +25,6 @@ const Header = ({
 
   return (
     <header className="glass-header">
-      {/* Top Promo Banner */}
-      <div className="header-banner">
-        <span>Starting offers upto 10% for all products</span>
-      </div>
-
       <div className="header-main">
         {/* Brand Logo */}
         <div className="header-brand" onClick={() => setActivePage('home')}>
