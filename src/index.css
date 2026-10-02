@@ -969,15 +969,16 @@ input:focus, select:focus, textarea:focus {
     gap: 0.5rem;
   }
   .header-brand-logo {
-    height: 38px !important;
-    max-height: 38px !important;
+    width: 40px !important;
+    height: auto !important;
+    max-width: 42px !important;
   }
   .header-brand-name {
     font-size: 1.1rem !important;
   }
   .header-icon-btn {
-    width: 36px !important;
-    height: 36px !important;
+    width: 44px !important;
+    height: 44px !important;
   }
   .header-icon-btn svg {
     width: 20px !important;
