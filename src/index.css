@@ -992,19 +992,65 @@ input:focus, select:focus, textarea:focus {
   .pink-hero-copy {
     display: flex !important;
     flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    margin: 0 auto !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .staggered-drop {
+    align-self: flex-start !important;
+    margin-left: 12% !important;
+    margin-bottom: 22px !important;
   }
   .pink-hero h1 {
-    font-size: 38px !important;
-    margin: 8px 0 12px !important;
-    line-height: 1.02 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    font-size: clamp(34px, 10vw, 42px) !important;
+    margin: 0 0 16px 0 !important;
+    line-height: 1.05 !important;
   }
-  .pink-hero p {
+  .desktop-br {
+    display: none !important;
+  }
+  .stagger-line-1 {
+    margin-left: 32% !important;
+    margin-bottom: 6px !important;
+  }
+  .stagger-line-2 {
+    margin-left: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  .stagger-heart {
+    font-size: 0.55em;
+    margin-left: 8px;
+    color: #ff4b98;
+    transform: translateY(-2px);
+    display: inline-block;
+  }
+  .desktop-rule {
+    display: none !important;
+  }
+  .staggered-p {
     font-size: 15px !important;
-    line-height: 1.4 !important;
-    margin-bottom: 20px !important;
+    line-height: 1.45 !important;
+    margin-bottom: 24px !important;
+    text-align: left !important;
+    margin-left: 10% !important;
+    max-width: 80% !important;
+  }
+  .mobile-br {
+    display: block !important;
+  }
+  @media (max-width: 360px) {
+    .stagger-line-1 { margin-left: 20% !important; }
+    .stagger-line-2 { margin-left: 35% !important; }
+    .staggered-p { margin-left: 5% !important; max-width: 90% !important; }
+  }
+  @media (min-width: 412px) and (max-width: 480px) {
+    .stagger-line-1 { margin-left: 35% !important; }
+    .stagger-line-2 { margin-left: 55% !important; }
   }
   .hero-cta {
     padding: 14px 24px !important;
@@ -1196,3 +1242,5 @@ input:focus, select:focus, textarea:focus {
 .mobile-search-row {
   display: none;
 }
+
+.mobile-br { display: none; }

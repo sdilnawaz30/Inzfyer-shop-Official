@@ -42,11 +42,14 @@ const HomePage = ({ setActivePage, onAddToCart, onToggleWishlist, wishlist, onSe
     <div className="storefront animate-fade-in">
       <section className="pink-hero">
         <div className="pink-hero-copy">
-          <div className="new-drop">NEW DROP</div>
-          <h1><span className="hero-title-line">Collect <span>Cute.</span></span><br /><span className="hero-title-line">Carry <em>Joy.</em></span></h1>
-          <div className="hero-rule"><Heart size={15} fill="currentColor" /></div>
-          <p>Handmade plushies, charms &amp; adorable gifts made to <strong>brighten every day.</strong></p>
-          <button className="hero-cta" onClick={() => { setSelectedCategory('New Arrivals'); setActivePage('shop'); }}>New Arrivals <ArrowRight size={22} /></button>
+          <div className="new-drop staggered-drop">NEW DROP</div>
+          <h1>
+            <span className="hero-title-line stagger-line-1">Collect <span>Cute.</span></span><br className="desktop-br" />
+            <span className="hero-title-line stagger-line-2">Carry <em>Joy <span className="stagger-heart">♡</span></em></span>
+          </h1>
+          <div className="hero-rule desktop-rule"><Heart size={15} fill="currentColor" /></div>
+          <p className="staggered-p">Handmade plushies, charms &amp; adorable gifts <br className="mobile-br" />made to <strong>brighten every day.</strong></p>
+          <button className="hero-cta staggered-cta" onClick={() => { setSelectedCategory('New Arrivals'); setActivePage('shop'); }}>New Arrivals <ArrowRight size={22} /></button>
         </div>
         <div className="hero-art" aria-hidden="true">
           <div className="hero-image-frame"><img src={heroImg} alt="" fetchpriority="high" /></div>
